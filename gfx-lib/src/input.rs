@@ -1,4 +1,5 @@
-use ::winit::{event::ElementState, event::KeyboardInput};
+use crate::Point2d;
+use ::winit::{event::ElementState, event::KeyboardInput, dpi::PhysicalPosition};
 use std::collections::HashMap;
 
 pub use ::winit::event::VirtualKeyCode;
@@ -8,6 +9,7 @@ pub struct InputState {
     current_keys: HashMap<VirtualKeyCode, bool>,
     pressed_keys: HashMap<VirtualKeyCode, bool>,
     released_keys: HashMap<VirtualKeyCode, bool>,
+    cursor_pos: Option<Point2d>,
 }
 
 impl InputState {
@@ -16,6 +18,7 @@ impl InputState {
             current_keys: HashMap::new(),
             pressed_keys: HashMap::new(),
             released_keys: HashMap::new(),
+            cursor_pos: None,
         }
     }
 
@@ -40,6 +43,14 @@ impl InputState {
                 self.current_keys.insert(keycode, false);
             }
         }
+    }
+
+    pub fn handle_cursor_movement(&mut self, position: PhysicalPosition<f64>) {
+        self.cursor_pos = Some(Point2d::new(position.x, position.y));
+    }
+
+    pub fn cursor_pos(&self) -> Point2d {
+        self.cursor_pos.unwrap_or(Point2d::origin())
     }
 
     #[allow(dead_code)]

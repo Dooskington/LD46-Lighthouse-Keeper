@@ -32,52 +32,47 @@ fn main() {
         state,
         move |game, renderer| {
             // Import textures
-            import_texture(1, "res/textures/costanza.png", renderer);
-            import_texture(2, "res/textures/sprites.png", renderer);
-            import_texture(3, "res/textures/font.png", renderer);
-            import_texture(4, "res/textures/bg.png", renderer);
-            import_texture(game::resources::TEX_BG_WORKSTATION, "res/textures/workstation-bg.png", renderer);
+            {
+                import_texture(
+                    game::resources::TEX_COSTANZA,
+                    "res/textures/costanza.png",
+                    renderer,
+                );
+                import_texture(
+                    game::resources::TEX_SPRITESHEET_BUTTONS,
+                    "res/textures/sprites.png",
+                    renderer,
+                );
+                import_texture(game::resources::TEX_FONT, "res/textures/font.png", renderer);
+                import_texture(
+                    game::resources::TEX_BG_WORKSTATION,
+                    "res/textures/workstation-bg.png",
+                    renderer,
+                );
+                import_texture(
+                    game::resources::TEX_BG_LAB,
+                    "res/textures/lab-bg.png",
+                    renderer,
+                );
+                import_texture(
+                    game::resources::TEX_BG_GLASS,
+                    "res/textures/glass-bg.png",
+                    renderer,
+                );
+                import_texture(
+                    game::resources::TEX_SPRITESHEET_ALIEN,
+                    "res/textures/alien-sprites.png",
+                    renderer,
+                );
+            }
 
+            // TODO
             // Import audio
+            /*
             {
                 let mut audio_db = game.world.write_resource::<AudioAssetDb>();
-                audio_db
-                    .import(
-                        AudioAssetId::MusicBackground,
-                        "res/audio/tha-bounce-life.wav",
-                    )
-                    .unwrap();
-                audio_db
-                    .import(AudioAssetId::SfxBallBounce0, "res/audio/ball-bounce-0.wav")
-                    .unwrap();
-                audio_db
-                    .import(AudioAssetId::SfxBallBounce1, "res/audio/ball-bounce-1.wav")
-                    .unwrap();
-                audio_db
-                    .import(
-                        AudioAssetId::SfxBallWallHit0,
-                        "res/audio/ball-wall-hit-0.wav",
-                    )
-                    .unwrap();
-                audio_db
-                    .import(
-                        AudioAssetId::SfxBallWallHit1,
-                        "res/audio/ball-wall-hit-1.wav",
-                    )
-                    .unwrap();
-                audio_db
-                    .import(AudioAssetId::SfxBrickBreak0, "res/audio/brick-break-0.wav")
-                    .unwrap();
-                audio_db
-                    .import(AudioAssetId::SfxBrickBreak1, "res/audio/brick-break-1.wav")
-                    .unwrap();
-                audio_db
-                    .import(AudioAssetId::SfxBallDeath0, "res/audio/ball-death-0.wav")
-                    .unwrap();
-
-                // Start playing the bg music right away
-                //audio::play(AudioAssetId::MusicBackground, &audio_db, true);
             }
+            */
         },
         move |game, _window, input, dt| {
             game.world.insert::<InputState>(input.clone());
@@ -85,7 +80,7 @@ fn main() {
             game.world.write_resource::<RenderState>().clear_commands();
 
             game.tick_dispatcher.dispatch(&mut game.world);
-            //game.physics_dispatcher.dispatch(&mut game.world);
+            game.physics_dispatcher.dispatch(&mut game.world);
 
             game.world.maintain();
         },
@@ -94,18 +89,39 @@ fn main() {
 
             let mut render = game.world.write_resource::<RenderState>();
 
+            // Day text (todo move this)
+            render.bind_color(COLOR_WHITE);
+            render.bind_layer(game::layers::LAYER_UI);
+            render.bind_transparency(Transparency::Transparent);
+            render.bind_texture(game::resources::TEX_FONT);
+            render.text(8.0, 8.0, 8, 16, 1.25, "Day 1");
+
             // FPS text
             let msg = format!("FPS: {}", window.fps);
             render.bind_color(COLOR_WHITE);
-            render.bind_layer(0);
+            render.bind_layer(game::layers::LAYER_UI);
             render.bind_transparency(Transparency::Transparent);
-            render.bind_texture(3);
+            render.bind_texture(game::resources::TEX_FONT);
             let fps_text_x = window_width as f32 - (msg.len() as f32 * 8.0) - 2.0;
             render.text(fps_text_x, 2.0, 8, 16, 1.0, &msg);
 
-            // Background
+            // Lab Background Layer
             render.bind_color(COLOR_WHITE);
-            render.bind_layer(0);
+            render.bind_layer(game::layers::LAYER_BG_LAB);
+            render.bind_transparency(Transparency::Opaque);
+            render.bind_texture(game::resources::TEX_BG_LAB);
+            render.textured_quad((0.0, 480.0), (640.0, 480.0), (0.0, 0.0), (640.0, 0.0));
+
+            // Glass Background Layer
+            render.bind_color(COLOR_WHITE);
+            render.bind_layer(game::layers::LAYER_BG_GLASS);
+            render.bind_transparency(Transparency::Opaque);
+            render.bind_texture(game::resources::TEX_BG_GLASS);
+            render.textured_quad((0.0, 480.0), (640.0, 480.0), (0.0, 0.0), (640.0, 0.0));
+
+            // Workstation Background Layer
+            render.bind_color(COLOR_WHITE);
+            render.bind_layer(game::layers::LAYER_BG_WORKSTATION);
             render.bind_transparency(Transparency::Opaque);
             render.bind_texture(game::resources::TEX_BG_WORKSTATION);
             render.textured_quad((0.0, 480.0), (640.0, 480.0), (0.0, 0.0), (640.0, 0.0));

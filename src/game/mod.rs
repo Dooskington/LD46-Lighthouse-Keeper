@@ -1,16 +1,25 @@
 pub mod audio;
 pub mod physics;
 pub mod render;
-pub mod transform;
 pub mod resources;
+pub mod transform;
+pub mod clickable;
+pub mod layers;
+pub mod alien;
+pub mod workstation;
 
+use workstation::*;
+use alien::*;
+use clickable::*;
+use layers::*;
 use audio::AudioAssetDb;
-use physics::{
-    ColliderSendPhysicsSystem, PhysicsState, RigidbodyReceivePhysicsSystem,
-    RigidbodySendPhysicsSystem, WorldStepPhysicsSystem,
-};
-use render::{RenderState, SpriteRenderSystem};
+use gfx::{color::*, renderer::Transparency, sprite::SpriteRegion};
+use ncollide2d::{pipeline::CollisionGroups, shape::Cuboid};
+use nphysics2d::object::BodyStatus;
+use physics::*;
+use render::{RenderState, SpriteComponent, SpriteRenderSystem};
 use specs::prelude::*;
+use shrev::EventChannel;
 use std::default::Default;
 use transform::TransformComponent;
 
@@ -33,6 +42,11 @@ impl<'a, 'b> GameState<'a, 'b> {
         let mut world = World::new();
 
         let mut tick_dispatcher = DispatcherBuilder::new()
+            .with(ClickableSystem::default(), "clickable", &[])
+            .with(AlienSystem::default(), "alien", &[])
+            .with(WorkstationSystem::default(), "workstation", &[])
+            .with_thread_local(AlienInfoRenderSystem::default())
+            .with_thread_local(WorkstationInfoRenderSystem::default())
             .with_thread_local(SpriteRenderSystem::default())
             .build();
 
@@ -51,6 +65,10 @@ impl<'a, 'b> GameState<'a, 'b> {
         world.insert(RenderState::new());
         world.insert(PhysicsState::new());
         world.insert(AudioAssetDb::new());
+        world.insert(EventChannel::<CollisionEvent>::new());
+        world.insert(WorkstationState::new());
+
+        build_scene(&mut world, width, height);
 
         GameState {
             world,
@@ -58,4 +76,98 @@ impl<'a, 'b> GameState<'a, 'b> {
             physics_dispatcher,
         }
     }
+}
+
+fn build_scene(world: &mut World, width: u32, height: u32) {
+    // Testing buttons
+    let collision_groups = CollisionGroups::new();
+    world
+        .create_entity()
+        .with(TransformComponent::new(
+            Vector2d::new(180.0, 360.0),
+            Vector2f::new(1.0, 1.0),
+        ))
+        .with(ColliderComponent::new(
+            Cuboid::new(Vector2d::new(
+                (49.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                (49.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+            )),
+            Vector2d::zeros(),
+            collision_groups,
+            0.0,
+        ))
+        .with(ClickableComponent::new())
+        .with(SpriteComponent::new(
+            SpriteRegion {
+                x: 0,
+                y: 0,
+                w: 49,
+                h: 49,
+            },
+            resources::TEX_SPRITESHEET_BUTTONS,
+            Point2f::origin(),
+            COLOR_WHITE,
+            layers::LAYER_WORKSTATION_CONTROLS,
+            Transparency::Opaque,
+        ))
+        .build();
+
+    world
+        .create_entity()
+        .with(TransformComponent::new(
+            Vector2d::new(180.0, 300.0),
+            Vector2f::new(1.0, 1.0),
+        ))
+        .with(ColliderComponent::new(
+            Cuboid::new(Vector2d::new(
+                (49.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                (49.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+            )),
+            Vector2d::zeros(),
+            collision_groups,
+            0.0,
+        ))
+        .with(ClickableComponent::new())
+        .with(SpriteComponent::new(
+            SpriteRegion {
+                x: 0,
+                y: 0,
+                w: 49,
+                h: 49,
+            },
+            resources::TEX_SPRITESHEET_BUTTONS,
+            Point2f::origin(),
+            COLOR_WHITE,
+            layers::LAYER_WORKSTATION_CONTROLS,
+            Transparency::Opaque,
+        ))
+        .build();
+
+    // Alien
+    world
+    .create_entity()
+    .with(TransformComponent::new(
+        Vector2d::new(width as f64 / 2.0, (height as f64 / 2.0) - 64.0),
+        Vector2f::new(1.0, 1.0),
+    ))
+    .with(SpriteComponent::new(
+        SpriteRegion {
+            x: 0,
+            y: 0,
+            w: 56,
+            h: 56,
+        },
+        resources::TEX_SPRITESHEET_ALIEN,
+        Point2f::new(0.5, 0.5),
+        COLOR_WHITE,
+        layers::LAYER_LAB,
+        Transparency::Opaque,
+    ))
+    .with(AlienComponent::new())
+    .build();
+}
+
+fn lerp(start: f32, end: f32, percentage: f32) -> f32 {
+    let percentage = percentage.max(0.0).min(1.0);
+    start + ((end - start) * percentage)
 }

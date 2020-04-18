@@ -1,9 +1,13 @@
-use crate::game::{render::SpriteComponent, transform::TransformComponent, Vector2d, Point2d, PIXELS_TO_WORLD_UNITS, PIXELS_PER_WORLD_UNIT};
+use crate::game::{
+    render::SpriteComponent, transform::TransformComponent, Point2d, Vector2d,
+    PIXELS_PER_WORLD_UNIT, PIXELS_TO_WORLD_UNITS,
+};
 use nalgebra::{Isometry2, Vector2};
 use ncollide2d::{
     pipeline::{CollisionGroups, ContactEvent},
     shape::{Shape, ShapeHandle},
 };
+use ncollide2d::{pipeline::InterferencesWithPoint};
 use nphysics2d::{
     force_generator::DefaultForceGeneratorSet,
     joint::DefaultJointConstraintSet,
@@ -14,10 +18,9 @@ use nphysics2d::{
     },
     world::{DefaultGeometricalWorld, DefaultMechanicalWorld},
 };
-use ncollide2d::{procedural::Polyline, transformation::ToPolyline};
 use shrev::EventChannel;
 use specs::prelude::*;
-use std::{marker::PhantomData, collections::HashMap};
+use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Debug)]
 pub enum CollisionType {
@@ -91,6 +94,14 @@ impl PhysicsState {
             &mut self.joint_constraints,
             &mut self.force_generators,
         );
+    }
+
+    pub fn interferences_with_point<'a, 'b>(&'a self, point: &'b Point2d, groups: &'b CollisionGroups) -> InterferencesWithPoint<'a, 'b, f64, DefaultColliderSet<f64>> {
+        self.geometrical_world.interferences_with_point(
+            &self.colliders,
+            point,
+            groups,
+        )
     }
 }
 
@@ -286,7 +297,10 @@ impl<'a> System<'a> for RigidbodySendPhysicsSystem {
         {
             if let Some(rb_handle) = physics.ent_body_handles.get(&ent.id()).cloned() {
                 let rb = physics.bodies.rigid_body_mut(rb_handle).unwrap();
-                rb.set_position(Isometry2::new(transform.position * PIXELS_TO_WORLD_UNITS, 0.0));
+                rb.set_position(Isometry2::new(
+                    transform.position * PIXELS_TO_WORLD_UNITS,
+                    0.0,
+                ));
             } else {
                 eprintln!("[RigidbodySendPhysicsSystem] Failed to update rigidbody because it didn't exist! Entity Id = {}", ent.id());
             }
@@ -403,11 +417,15 @@ impl<'a> System<'a> for ColliderSendPhysicsSystem {
             // Otherwise we just attach it to the "ground".
             let (parent_body_handle, translation) =
                 if let Some(rb_handle) = physics.ent_body_handles.get(&ent.id()) {
-                    (rb_handle.clone(), (collider.center + collider.offset) * PIXELS_TO_WORLD_UNITS)
+                    (
+                        rb_handle.clone(),
+                        (collider.center + collider.offset) * PIXELS_TO_WORLD_UNITS,
+                    )
                 } else {
                     (
                         physics.ground_body_handle.clone(),
-                        (transform.position + collider.center + collider.offset) * PIXELS_TO_WORLD_UNITS,
+                        (transform.position + collider.center + collider.offset)
+                            * PIXELS_TO_WORLD_UNITS,
                     )
                 };
 
@@ -456,7 +474,8 @@ impl<'a> System<'a> for ColliderSendPhysicsSystem {
             if let Some(collider_handle) = physics.ent_collider_handles.get(&ent.id()).cloned() {
                 let phys_collider = physics.colliders.get_mut(collider_handle).unwrap();
                 phys_collider.set_position(Isometry2::new(
-                    (transform.position + collider.center + collider.offset) * PIXELS_TO_WORLD_UNITS,
+                    (transform.position + collider.center + collider.offset)
+                        * PIXELS_TO_WORLD_UNITS,
                     0.0,
                 ));
             } else {

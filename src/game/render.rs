@@ -1,5 +1,5 @@
 use crate::game::{
-    physics::{PhysicsState, RigidbodyComponent, ColliderComponent},
+    physics::{ColliderComponent, PhysicsState, RigidbodyComponent},
     transform::TransformComponent,
     Point2d, Vector2d,
 };
@@ -9,9 +9,9 @@ use gfx::{
     sprite::*,
     Point2f, Vector2f,
 };
-use ncollide2d::{shape::Shape, procedural::Polyline, transformation::ToPolyline};
-use std::marker::PhantomData;
+use ncollide2d::{procedural::Polyline, shape::Shape, transformation::ToPolyline};
 use specs::prelude::*;
+use std::marker::PhantomData;
 
 #[derive(Default)]
 pub struct RenderState {
