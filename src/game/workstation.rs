@@ -44,8 +44,17 @@ impl<'a> System<'a> for WorkstationSystem {
 
     fn run(&mut self, (workstation_events, mut workstation): Self::SystemData) {
         for event in workstation_events.read(&mut self.workstation_event_reader.as_mut().unwrap()) {
-            println!("{:?}", event);
+            match event {
+                WorkstationEvent::RaiseTemperature => {
+                    workstation.room_temperature += 0.25;
+                }
+                WorkstationEvent::LowerTemperature => {
+                    workstation.room_temperature -= 0.25;
+                }
+            }
         }
+
+        workstation.room_temperature = workstation.room_temperature.min(alien::MAX_TEMPERATURE).max(alien::MIN_TEMPERATURE);
     }
 }
 

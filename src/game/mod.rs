@@ -176,3 +176,13 @@ fn lerp(start: f32, end: f32, percentage: f32) -> f32 {
     let percentage = percentage.max(0.0).min(1.0);
     start + ((end - start) * percentage)
 }
+
+fn color_lerp(start: Color, end: Color, percentage: f32) -> Color {
+    let mut c = Color::new(0, 0, 0, 0);
+    c.r = lerp(start.r, end.r, percentage);
+    c.g = lerp(start.g, end.g, percentage);
+    c.b = lerp(start.b, end.b, percentage);
+    c.a = lerp(start.a, end.a, percentage);
+
+    c
+}

@@ -26,6 +26,13 @@ pub const COLOR_RED: Color = Color {
     a: 1.0,
 };
 
+pub const COLOR_YELLOW: Color = Color {
+    r: 0.5,
+    g: 0.5,
+    b: 0.0,
+    a: 1.0,
+};
+
 pub const COLOR_GREEN: Color = Color {
     r: 0.0,
     g: 1.0,
@@ -42,10 +49,10 @@ pub const COLOR_BLUE: Color = Color {
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Color {
-    r: f32,
-    g: f32,
-    b: f32,
-    a: f32,
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
 }
 
 impl Color {
