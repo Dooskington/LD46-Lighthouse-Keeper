@@ -1,0 +1,15 @@
+[package]
+name = "ld46"
+version = "0.1.0"
+authors = ["Declan Hopkins <hopkins.declan@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+gfx = { path = "gfx-lib" }
+rand = "0.7"
+specs = { version = "0.16.1", features = ["storage-event-control"] }
+shrev = "1.1.1"
+nalgebra = "0.20.0"
+ncollide2d = "0.22"
+nphysics2d = "0.14"
+rodio = "0.11.0"
