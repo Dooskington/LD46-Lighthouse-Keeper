@@ -3,11 +3,11 @@ use crate::game::{
     PIXELS_PER_WORLD_UNIT, PIXELS_TO_WORLD_UNITS,
 };
 use nalgebra::{Isometry2, Vector2};
+use ncollide2d::pipeline::InterferencesWithPoint;
 use ncollide2d::{
     pipeline::{CollisionGroups, ContactEvent},
     shape::{Shape, ShapeHandle},
 };
-use ncollide2d::{pipeline::InterferencesWithPoint};
 use nphysics2d::{
     force_generator::DefaultForceGeneratorSet,
     joint::DefaultJointConstraintSet,
@@ -96,12 +96,13 @@ impl PhysicsState {
         );
     }
 
-    pub fn interferences_with_point<'a, 'b>(&'a self, point: &'b Point2d, groups: &'b CollisionGroups) -> InterferencesWithPoint<'a, 'b, f64, DefaultColliderSet<f64>> {
-        self.geometrical_world.interferences_with_point(
-            &self.colliders,
-            point,
-            groups,
-        )
+    pub fn interferences_with_point<'a, 'b>(
+        &'a self,
+        point: &'b Point2d,
+        groups: &'b CollisionGroups,
+    ) -> InterferencesWithPoint<'a, 'b, f64, DefaultColliderSet<f64>> {
+        self.geometrical_world
+            .interferences_with_point(&self.colliders, point, groups)
     }
 }
 

@@ -1,7 +1,13 @@
-use crate::game::{*, physics::*, Point2d};
+use crate::game::{physics::*, Point2d, *};
 use gfx::input::*;
 use ncollide2d::pipeline::CollisionGroups;
 use specs::prelude::*;
+
+#[derive(Clone, Copy, Debug)]
+pub enum WorkstationEvent {
+    RaiseTemperature,
+    LowerTemperature,
+}
 
 pub struct WorkstationState {
     pub room_temperature: f32,
@@ -16,15 +22,30 @@ impl WorkstationState {
 }
 
 #[derive(Default)]
-pub struct WorkstationSystem;
+pub struct WorkstationSystem {
+    workstation_event_reader: Option<ReaderId<WorkstationEvent>>,
+}
 
 impl<'a> System<'a> for WorkstationSystem {
     type SystemData = (
+        ReadExpect<'a, EventChannel<WorkstationEvent>>,
         WriteExpect<'a, WorkstationState>,
     );
 
-    fn run(&mut self, mut workstation: Self::SystemData) {
-        // intercept workstation events like temperature modification
+    fn setup(&mut self, world: &mut World) {
+        Self::SystemData::setup(world);
+
+        self.workstation_event_reader = Some(
+            world
+                .fetch_mut::<EventChannel<WorkstationEvent>>()
+                .register_reader(),
+        );
+    }
+
+    fn run(&mut self, (workstation_events, mut workstation): Self::SystemData) {
+        for event in workstation_events.read(&mut self.workstation_event_reader.as_mut().unwrap()) {
+            println!("{:?}", event);
+        }
     }
 }
 
@@ -32,10 +53,7 @@ impl<'a> System<'a> for WorkstationSystem {
 pub struct WorkstationInfoRenderSystem;
 
 impl<'a> System<'a> for WorkstationInfoRenderSystem {
-    type SystemData = (
-        Write<'a, RenderState>,
-        ReadExpect<'a, WorkstationState>,
-    );
+    type SystemData = (Write<'a, RenderState>, ReadExpect<'a, WorkstationState>);
 
     fn run(&mut self, (mut render, workstation): Self::SystemData) {
         render.bind_layer(layers::LAYER_UI);
@@ -43,6 +61,13 @@ impl<'a> System<'a> for WorkstationInfoRenderSystem {
         render.bind_texture(resources::TEX_FONT);
 
         render.bind_color(COLOR_WHITE);
-        render.text(8.0, 175.0, 8, 16, 1.1, &format!("ROOM TEMP: {:.1}", workstation.room_temperature));
+        render.text(
+            8.0,
+            175.0,
+            8,
+            16,
+            1.1,
+            &format!("ROOM TEMP: {:.1}", workstation.room_temperature),
+        );
     }
 }

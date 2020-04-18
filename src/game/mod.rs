@@ -1,27 +1,27 @@
+pub mod alien;
 pub mod audio;
+pub mod clickable;
+pub mod layers;
 pub mod physics;
 pub mod render;
 pub mod resources;
 pub mod transform;
-pub mod clickable;
-pub mod layers;
-pub mod alien;
 pub mod workstation;
 
-use workstation::*;
 use alien::*;
-use clickable::*;
-use layers::*;
 use audio::AudioAssetDb;
+use clickable::*;
 use gfx::{color::*, renderer::Transparency, sprite::SpriteRegion};
+use layers::*;
 use ncollide2d::{pipeline::CollisionGroups, shape::Cuboid};
 use nphysics2d::object::BodyStatus;
 use physics::*;
 use render::{RenderState, SpriteComponent, SpriteRenderSystem};
-use specs::prelude::*;
 use shrev::EventChannel;
+use specs::prelude::*;
 use std::default::Default;
 use transform::TransformComponent;
+use workstation::*;
 
 pub type Vector2f = nalgebra::Vector2<f32>;
 pub type Vector2d = nalgebra::Vector2<f64>;
@@ -40,6 +40,14 @@ pub struct GameState<'a, 'b> {
 impl<'a, 'b> GameState<'a, 'b> {
     pub fn new(width: u32, height: u32) -> GameState<'a, 'b> {
         let mut world = World::new();
+
+        // Resources
+        world.insert(RenderState::new());
+        world.insert(PhysicsState::new());
+        world.insert(AudioAssetDb::new());
+        world.insert(EventChannel::<CollisionEvent>::new());
+        world.insert(EventChannel::<WorkstationEvent>::new());
+        world.insert(WorkstationState::new());
 
         let mut tick_dispatcher = DispatcherBuilder::new()
             .with(ClickableSystem::default(), "clickable", &[])
@@ -60,13 +68,6 @@ impl<'a, 'b> GameState<'a, 'b> {
             .build();
 
         physics_dispatcher.setup(&mut world);
-
-        // Resources
-        world.insert(RenderState::new());
-        world.insert(PhysicsState::new());
-        world.insert(AudioAssetDb::new());
-        world.insert(EventChannel::<CollisionEvent>::new());
-        world.insert(WorkstationState::new());
 
         build_scene(&mut world, width, height);
 
@@ -96,7 +97,9 @@ fn build_scene(world: &mut World, width: u32, height: u32) {
             collision_groups,
             0.0,
         ))
-        .with(ClickableComponent::new())
+        .with(ClickableComponent::new(Some(
+            WorkstationEvent::LowerTemperature,
+        )))
         .with(SpriteComponent::new(
             SpriteRegion {
                 x: 0,
@@ -127,7 +130,9 @@ fn build_scene(world: &mut World, width: u32, height: u32) {
             collision_groups,
             0.0,
         ))
-        .with(ClickableComponent::new())
+        .with(ClickableComponent::new(Some(
+            WorkstationEvent::RaiseTemperature,
+        )))
         .with(SpriteComponent::new(
             SpriteRegion {
                 x: 0,
@@ -145,26 +150,26 @@ fn build_scene(world: &mut World, width: u32, height: u32) {
 
     // Alien
     world
-    .create_entity()
-    .with(TransformComponent::new(
-        Vector2d::new(width as f64 / 2.0, (height as f64 / 2.0) - 64.0),
-        Vector2f::new(1.0, 1.0),
-    ))
-    .with(SpriteComponent::new(
-        SpriteRegion {
-            x: 0,
-            y: 0,
-            w: 56,
-            h: 56,
-        },
-        resources::TEX_SPRITESHEET_ALIEN,
-        Point2f::new(0.5, 0.5),
-        COLOR_WHITE,
-        layers::LAYER_LAB,
-        Transparency::Opaque,
-    ))
-    .with(AlienComponent::new())
-    .build();
+        .create_entity()
+        .with(TransformComponent::new(
+            Vector2d::new(width as f64 / 2.0, (height as f64 / 2.0) - 64.0),
+            Vector2f::new(1.0, 1.0),
+        ))
+        .with(SpriteComponent::new(
+            SpriteRegion {
+                x: 0,
+                y: 0,
+                w: 56,
+                h: 56,
+            },
+            resources::TEX_SPRITESHEET_ALIEN,
+            Point2f::new(0.5, 0.5),
+            COLOR_WHITE,
+            layers::LAYER_LAB,
+            Transparency::Opaque,
+        ))
+        .with(AlienComponent::new())
+        .build();
 }
 
 fn lerp(start: f32, end: f32, percentage: f32) -> f32 {

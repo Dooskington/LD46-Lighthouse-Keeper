@@ -2,13 +2,16 @@ use crate::Point2d;
 use ::winit::{event::ElementState, event::KeyboardInput, dpi::PhysicalPosition};
 use std::collections::HashMap;
 
-pub use ::winit::event::VirtualKeyCode;
+pub use ::winit::event::{MouseButton, VirtualKeyCode};
 
 #[derive(Default, Clone)]
 pub struct InputState {
     current_keys: HashMap<VirtualKeyCode, bool>,
     pressed_keys: HashMap<VirtualKeyCode, bool>,
     released_keys: HashMap<VirtualKeyCode, bool>,
+    current_mouse_buttons: HashMap<MouseButton, bool>,
+    pressed_mouse_buttons: HashMap<MouseButton, bool>,
+    released_mouse_buttons: HashMap<MouseButton, bool>,
     cursor_pos: Option<Point2d>,
 }
 
@@ -18,6 +21,9 @@ impl InputState {
             current_keys: HashMap::new(),
             pressed_keys: HashMap::new(),
             released_keys: HashMap::new(),
+            current_mouse_buttons: HashMap::new(),
+            pressed_mouse_buttons: HashMap::new(),
+            released_mouse_buttons: HashMap::new(),
             cursor_pos: None,
         }
     }
@@ -45,12 +51,43 @@ impl InputState {
         }
     }
 
+    pub fn handle_mouse_input(&mut self, state: ElementState, button: MouseButton) {
+        match state {
+            ElementState::Pressed => {
+                if !self.is_mouse_button_held(button) {
+                    self.pressed_mouse_buttons.insert(button, true);
+                }
+
+                self.current_mouse_buttons.insert(button, true);
+            }
+            ElementState::Released => {
+                self.released_mouse_buttons.insert(button, true);
+                self.current_mouse_buttons.insert(button, false);
+            }
+        }
+    }
+
     pub fn handle_cursor_movement(&mut self, position: PhysicalPosition<f64>) {
         self.cursor_pos = Some(Point2d::new(position.x, position.y));
     }
 
     pub fn cursor_pos(&self) -> Point2d {
         self.cursor_pos.unwrap_or(Point2d::origin())
+    }
+
+    #[allow(dead_code)]
+    pub fn is_mouse_button_pressed(&self, button: MouseButton) -> bool {
+        *self.pressed_mouse_buttons.get(&button).unwrap_or(&false)
+    }
+
+    #[allow(dead_code)]
+    pub fn is_mouse_button_release(&self, button: MouseButton) -> bool {
+        *self.released_mouse_buttons.get(&button).unwrap_or(&false)
+    }
+
+    #[allow(dead_code)]
+    pub fn is_mouse_button_held(&self, button: MouseButton) -> bool {
+        *self.current_mouse_buttons.get(&button).unwrap_or(&false)
     }
 
     #[allow(dead_code)]

@@ -1,4 +1,4 @@
-use crate::game::{*, physics::*, Point2d};
+use crate::game::{physics::*, Point2d, *};
 use gfx::input::*;
 use ncollide2d::pipeline::CollisionGroups;
 use specs::prelude::*;
@@ -40,7 +40,11 @@ impl<'a> System<'a> for AlienSystem {
         let temp_adjust_speed = 0.25;
 
         for alien in (&mut aliens).join() {
-            alien.temperature = lerp(alien.temperature, workstation.room_temperature, temp_adjust_speed * 0.016);
+            alien.temperature = lerp(
+                alien.temperature,
+                workstation.room_temperature,
+                temp_adjust_speed * 0.016,
+            );
         }
     }
 }
@@ -49,10 +53,7 @@ impl<'a> System<'a> for AlienSystem {
 pub struct AlienInfoRenderSystem;
 
 impl<'a> System<'a> for AlienInfoRenderSystem {
-    type SystemData = (
-        Write<'a, RenderState>,
-        ReadStorage<'a, AlienComponent>,
-    );
+    type SystemData = (Write<'a, RenderState>, ReadStorage<'a, AlienComponent>);
 
     fn run(&mut self, (mut render, aliens): Self::SystemData) {
         for alien in (&aliens).join() {
@@ -62,17 +63,51 @@ impl<'a> System<'a> for AlienInfoRenderSystem {
 
             render.bind_color(COLOR_BLUE);
             render.text(8.0, 65.0, 8, 16, 1.1, "NUTRIENTS");
-            render.text(8.0, 86.0, 8, 16, 1.0, &format!("A: {:.1}", alien.nutrient_a));
-            render.text(8.0, 102.0, 8, 16, 1.0, &format!("B: {:.1}", alien.nutrient_b));
-            render.text(8.0, 118.0, 8, 16, 1.0, &format!("C: {:.1}", alien.nutrient_c));
-            render.text(8.0, 134.0, 8, 16, 1.0, &format!("D: {:.1}", alien.nutrient_d));
+            render.text(
+                8.0,
+                86.0,
+                8,
+                16,
+                1.0,
+                &format!("A: {:.1}", alien.nutrient_a),
+            );
+            render.text(
+                8.0,
+                102.0,
+                8,
+                16,
+                1.0,
+                &format!("B: {:.1}", alien.nutrient_b),
+            );
+            render.text(
+                8.0,
+                118.0,
+                8,
+                16,
+                1.0,
+                &format!("C: {:.1}", alien.nutrient_c),
+            );
+            render.text(
+                8.0,
+                134.0,
+                8,
+                16,
+                1.0,
+                &format!("D: {:.1}", alien.nutrient_d),
+            );
 
             render.bind_color(COLOR_RED);
-            render.text(8.0, 155.0, 8, 16, 1.1, &format!("TEMP: {:.1}", alien.temperature));
+            render.text(
+                8.0,
+                155.0,
+                8,
+                16,
+                1.1,
+                &format!("TEMP: {:.1}", alien.temperature),
+            );
         }
     }
 }
-
 
 // How will this work?
 // AlienComponent has stats

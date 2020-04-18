@@ -116,6 +116,13 @@ pub fn run<T>(
 
                     input_state.handle_keyboard_input(&input);
                 }
+                WinitWindowEvent::MouseInput {
+                    state,
+                    button,
+                    ..
+                } => {
+                    input_state.handle_mouse_input(state, button);
+                },
                 WinitWindowEvent::CursorMoved {
                     position,
                     ..
