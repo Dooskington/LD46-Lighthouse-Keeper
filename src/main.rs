@@ -80,8 +80,7 @@ fn main() {
             render.bind_layer(game::layers::LAYER_UI);
             render.bind_transparency(Transparency::Transparent);
             render.bind_texture(game::resources::TEX_FONT);
-            let fps_text_x = window_width as f32 - (msg.len() as f32 * 8.0) - 2.0;
-            render.text(fps_text_x, 2.0, 8, 16, 1.0, &msg);
+            render.text(2.0, window_height as f32 - 18.0, 8, 16, 1.0, &msg);
 
             // Lighthouse Background Layer
             render.bind_color(COLOR_WHITE);

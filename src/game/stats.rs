@@ -26,88 +26,106 @@ impl<'a> System<'a> for StatsInfoRenderSystem {
     type SystemData = (Write<'a, RenderState>, ReadExpect<'a, StatsState>);
 
     fn run(&mut self, (mut render, stats): Self::SystemData) {
-        /*
-        // Time UI background
+        // Sanity icon
         render.bind_transparency(Transparency::Opaque);
         render.bind_texture(resources::TEX_SPRITESHEET_UI);
         render.bind_color(COLOR_WHITE);
         render.bind_layer(layers::LAYER_UI);
         render.sprite(
-            0.0,
-            0.0,
-            Point2f::origin(),
+            520.0,
+            10.0,
+            Point2f::new(0.0, 0.0),
             Vector2f::new(0.5, 0.5),
             SpriteRegion {
-                x: 0,
+                x: 608,
                 y: 0,
-                w: 320,
-                h: 160
+                w: 96,
+                h: 96,
             },
         );
 
-        let hours_bar_region = match time.hours_passed {
-            0 => SpriteRegion {
-                x: 320,
-                y: 0,
-                w: 288,
-                h: 64
-            },
-            1 => SpriteRegion {
-                x: 320,
-                y: 64,
-                w: 288,
-                h: 64
-            },
-            2 => SpriteRegion {
-                x: 320,
-                y: 128,
-                w: 288,
-                h: 64
-            },
-            3 => SpriteRegion {
-                x: 320,
-                y: 192,
-                w: 288,
-                h: 64
-            },
-            _ => SpriteRegion {
-                x: 320,
-                y: 256,
-                w: 288,
-                h: 64
-            },
-        };
-
+        // Food icon
         render.sprite(
-            0.0,
-            73.0,
-            Point2f::origin(),
+            520.0,
+            85.0,
+            Point2f::new(0.0, 0.0),
             Vector2f::new(0.5, 0.5),
-            hours_bar_region,
+            SpriteRegion {
+                x: 704,
+                y: 0,
+                w: 96,
+                h: 96,
+            },
         );
 
-        // Day Text
-        render.bind_layer(layers::LAYER_UI);
-        render.bind_transparency(Transparency::Opaque);
+        // Parts icon
+        render.sprite(
+            520.0,
+            150.0,
+            Point2f::new(0.0, 0.0),
+            Vector2f::new(0.5, 0.5),
+            SpriteRegion {
+                x: 800,
+                y: 0,
+                w: 96,
+                h: 96,
+            },
+        );
+
+        // Gas icon
+        render.sprite(
+            520.0,
+            215.0,
+            Point2f::new(0.0, 0.0),
+            Vector2f::new(0.5, 0.5),
+            SpriteRegion {
+                x: 896,
+                y: 0,
+                w: 96,
+                h: 96,
+            },
+        );
+
+        // Sanity text
         render.bind_texture(resources::TEX_FONT);
         render.bind_color(COLOR_BLACK);
         render.text(
-            8.0,
-            8.0,
+            535.0,
+            64.0,
             8,
             16,
-            2.0,
-            &format!("Day {}", time.day),
+            1.0,
+            &format!("{}", stats.sanity),
         );
 
+        // Food text
         render.text(
-            8.0,
-            48.0,
+            535.0,
+            135.0,
             8,
             16,
-            1.5,
-            &format!("{}", time.time_of_day),
+            1.0,
+            &format!("{}", stats.food),
         );
-        */
+
+        // Parts text
+        render.text(
+            535.0,
+            205.0,
+            8,
+            16,
+            1.0,
+            &format!("{}", stats.parts),
+        );
+
+        // Gas text
+        render.text(
+            535.0,
+            270.0,
+            8,
+            16,
+            1.0,
+            &format!("{}", stats.gas),
+        );
     }
 }
