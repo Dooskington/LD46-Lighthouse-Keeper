@@ -1,12 +1,12 @@
 mod game;
 
 use game::{
+    activity::*,
     audio::{AudioAssetDb, AudioAssetId},
     physics::PhysicsState,
     render::RenderState,
-    time::*,
-    activity::*,
     resources::*,
+    time::*,
     GameState,
 };
 use gfx::{
@@ -74,7 +74,11 @@ fn main() {
             game.tick_dispatcher.dispatch(&mut game.world);
             game.physics_dispatcher.dispatch(&mut game.world);
 
-            if game.world.read_resource::<ActivityState>().is_rebuild_required {
+            if game
+                .world
+                .read_resource::<ActivityState>()
+                .is_rebuild_required
+            {
                 create_activity_ents(&mut game.world);
             }
 
@@ -98,7 +102,12 @@ fn main() {
             render.bind_layer(game::layers::LAYER_BG);
             render.bind_transparency(Transparency::Opaque);
             render.bind_texture(game::resources::TEX_BG_LIGHTHOUSE);
-            render.textured_quad((0.0, window_height as f32), (window_width as f32, window_height as f32), (0.0, 0.0), (window_width as f32, 0.0));
+            render.textured_quad(
+                (0.0, window_height as f32),
+                (window_width as f32, window_height as f32),
+                (0.0, 0.0),
+                (window_width as f32, 0.0),
+            );
 
             // Lighthouse light (during night)
             if game.world.read_resource::<TimeState>().time_of_day == TimeOfDay::Night {
@@ -108,7 +117,12 @@ fn main() {
                 render.bind_layer(game::layers::LAYER_BG + 1);
                 render.bind_transparency(Transparency::Opaque);
                 render.bind_texture(game::resources::TEX_BG_LIGHTHOUSE_LIGHT);
-                render.textured_quad((0.0, window_height as f32), (window_width as f32, window_height as f32), (0.0, 0.0), (window_width as f32, 0.0));
+                render.textured_quad(
+                    (0.0, window_height as f32),
+                    (window_width as f32, window_height as f32),
+                    (0.0, 0.0),
+                    (window_width as f32, 0.0),
+                );
             }
 
             // Process commands into batches and send to the renderer

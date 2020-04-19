@@ -34,10 +34,7 @@ impl std::fmt::Display for Stat {
 
 pub struct StatsState {
     stats: HashMap<Stat, i32>,
-
-    // TODO
-    // flags list?
-    // flags would be things like, GeneratorBroken, LensBroken, JunkAcquired,
+    conditions: HashMap<GameCondition, bool>,
 }
 
 impl StatsState {
@@ -49,9 +46,18 @@ impl StatsState {
         stats.insert(Stat::Parts, 5);
         stats.insert(Stat::Money, 20);
 
-        StatsState {
-            stats,
-        }
+        let conditions = HashMap::new();
+
+        StatsState { stats, conditions }
+    }
+
+    pub fn condition(&self, condition: GameCondition) -> bool {
+        self.conditions.get(&condition).unwrap_or(&false).clone()
+    }
+
+    pub fn set_condition(&mut self, condition: GameCondition, val: bool) {
+        let entry = self.conditions.entry(condition).or_insert(false);
+        *entry = val;
     }
 
     pub fn stat(&self, stat: Stat) -> i32 {
@@ -89,19 +95,28 @@ impl<'a> System<'a> for StatsSystem {
         // TODO
         // intercept NewDayStarted events
         // every day, consume 1 food [x]
-        // every 2 days, consume gasoline and flag generator as broken
+        // every 2 days, consume gasoline and flag generator as empty
         // every 4-7 days, merchant arrives
 
         for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()) {
             match event {
-                GameEvent::NewDayStarted => {
+                GameEvent::NewDayStarted { day } => {
                     stats.add(Stat::Food, -1);
                     if stats.stat(Stat::Food) <= 0 {
                         // TODO
+                        println!("out of food GAME OVER");
                     }
 
                     println!("You unpack the days rations from food storage. (Food -1)");
-                },
+
+                    // TODO only get paid for each day the lighthouse is on
+                    if (day % 5) == 0 {
+                        stats.add(Stat::Money, 5);
+                        println!("You receive a paycheck for your duties. (Money +5)");
+                    }
+
+                    stats.set_condition(GameCondition::FinalDay, *day >= 30);
+                }
                 GameEvent::HandleStatEffects { effects } => {
                     for effect in effects {
                         match effect {
@@ -116,7 +131,7 @@ impl<'a> System<'a> for StatsSystem {
                         }
                     }
                 }
-                _ => {},
+                _ => {}
             }
         }
     }

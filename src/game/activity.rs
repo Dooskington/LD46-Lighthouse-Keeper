@@ -7,9 +7,7 @@ pub struct ActivityComponent {
 
 impl ActivityComponent {
     pub fn new(activity: Activity) -> Self {
-        ActivityComponent {
-            activity,
-        }
+        ActivityComponent { activity }
     }
 }
 
@@ -24,7 +22,7 @@ pub struct Activity {
     pub event: GameEvent,
     pub effects: Vec<StatEffect>,
     pub is_repeatable: bool,
-    // TODO required_conditions?
+    pub conditions: Vec<GameCondition>,
 }
 
 #[derive(Default)]
@@ -49,7 +47,13 @@ pub struct ActivitySystem {
 }
 
 impl<'a> System<'a> for ActivitySystem {
-    type SystemData = (Entities<'a>, WriteExpect<'a, ActivityState>, ReadExpect<'a, EventChannel<OnClickedEvent>>, WriteExpect<'a, EventChannel<GameEvent>>, ReadStorage<'a, ActivityComponent>);
+    type SystemData = (
+        Entities<'a>,
+        WriteExpect<'a, ActivityState>,
+        ReadExpect<'a, EventChannel<OnClickedEvent>>,
+        WriteExpect<'a, EventChannel<GameEvent>>,
+        ReadStorage<'a, ActivityComponent>,
+    );
 
     fn setup(&mut self, world: &mut World) {
         Self::SystemData::setup(world);
@@ -57,24 +61,27 @@ impl<'a> System<'a> for ActivitySystem {
         self.game_event_reader = Some(
             world
                 .fetch_mut::<EventChannel<GameEvent>>()
-                .register_reader()
-            );
+                .register_reader(),
+        );
 
         self.on_clicked_event_reader = Some(
             world
                 .fetch_mut::<EventChannel<OnClickedEvent>>()
-                .register_reader()
-            );
+                .register_reader(),
+        );
     }
 
-    fn run(&mut self, (ents, mut activity_state, on_clicked_events, mut game_events, activity_comps): Self::SystemData) {
+    fn run(
+        &mut self,
+        (ents, mut activity_state, on_clicked_events, mut game_events, activity_comps): Self::SystemData,
+    ) {
         for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()) {
             match event {
-                GameEvent::RefreshActivities => {
+                GameEvent::NewTimeOfDayStarted { .. } => {
                     println!("Refreshing activities (remove this)");
 
                     activity_state.is_rebuild_required = true;
-                },
+                }
                 GameEvent::ActivityGoFishing => {
                     println!("You attempt to catch some fish.");
                 }
@@ -82,19 +89,25 @@ impl<'a> System<'a> for ActivitySystem {
                     println!("You maintain some fixtures around the lighthouse.");
                 }
                 GameEvent::ActivityPrayToJand => {
-                    println!("You pray to Jand, for protection and fortune. Perhaps it will pity you.");
+                    println!(
+                        "You pray to Jand, for protection and fortune. Perhaps it will pity you."
+                    );
                 }
                 GameEvent::ActivityDrinkAlcobev => {
                     println!("You have a drink to dull the pain.");
                 }
-                _ => {},
+                _ => {}
             }
         }
 
         for event in on_clicked_events.read(&mut self.on_clicked_event_reader.as_mut().unwrap()) {
             if let Some(comp) = activity_comps.get(event.ent) {
-                game_events.single_write(GameEvent::HandleStatEffects { effects: comp.activity.effects.clone() });
-                game_events.single_write(GameEvent::ProgressTime { hours: comp.activity.hours_required });
+                game_events.single_write(GameEvent::HandleStatEffects {
+                    effects: comp.activity.effects.clone(),
+                });
+                game_events.single_write(GameEvent::ProgressTime {
+                    hours: comp.activity.hours_required,
+                });
                 game_events.single_write(comp.activity.event.clone());
 
                 if !comp.activity.is_repeatable {
@@ -111,29 +124,59 @@ pub fn create_activities() -> Vec<Activity> {
             name: String::from("Go Fishing"),
             hours_required: 2,
             event: GameEvent::ActivityGoFishing,
-            effects: vec![StatEffect::Add { stat: Stat::Food, amount: 1 }],
+            effects: vec![StatEffect::Add {
+                stat: Stat::Food,
+                amount: 1,
+            }],
             is_repeatable: true,
+            conditions: vec![],
         },
         Activity {
             name: String::from("Perform Maintenance"),
             hours_required: 3,
             event: GameEvent::ActivityPerformMaintenance,
-            effects: vec![StatEffect::Subtract { stat: Stat::Parts, amount: 1 }],
+            effects: vec![StatEffect::Subtract {
+                stat: Stat::Parts,
+                amount: 1,
+            }],
             is_repeatable: false,
+            conditions: vec![],
         },
         Activity {
             name: String::from("Pray To Jand"),
             hours_required: 1,
             event: GameEvent::ActivityPrayToJand,
-            effects: vec![StatEffect::Add { stat: Stat::Sanity, amount: 1 }],
+            effects: vec![StatEffect::Add {
+                stat: Stat::Sanity,
+                amount: 1,
+            }],
             is_repeatable: false,
+            conditions: vec![],
         },
         Activity {
             name: String::from("Have a Drink"),
             hours_required: 1,
             event: GameEvent::ActivityDrinkAlcobev,
-            effects: vec![StatEffect::Add { stat: Stat::Sanity, amount: 1 }, StatEffect::Subtract { stat: Stat::Food, amount: 1 }],
+            effects: vec![
+                StatEffect::Add {
+                    stat: Stat::Sanity,
+                    amount: 1,
+                },
+                StatEffect::Subtract {
+                    stat: Stat::Food,
+                    amount: 1,
+                },
+            ],
             is_repeatable: false,
+            conditions: vec![],
+        },
+        Activity {
+            name: String::from("End Game (TODO)"),
+            hours_required: 1,
+            event: GameEvent::FinalDayGameWin,
+            effects: vec![],
+            is_repeatable: false,
+            conditions: vec![GameCondition::FinalDay],
         },
     ]
 }
@@ -154,11 +197,23 @@ pub fn create_activity_ents(world: &mut World) {
     let layout_pos_x = 340.0;
     let mut layout_pos_y = 350.0;
     for activity in activities {
+        let mut are_conditions_satisfied = true;
+        for condition in activity.conditions.iter() {
+            if !world.read_resource::<StatsState>().condition(*condition) {
+                are_conditions_satisfied = false;
+                break;
+            }
+        }
+
+        if !are_conditions_satisfied {
+            continue;
+        }
+
         world
             .create_entity()
             .with(TransformComponent::new(
-            Vector2d::new(layout_pos_x, layout_pos_y),
-            Vector2f::new(1.5, 1.0),
+                Vector2d::new(layout_pos_x, layout_pos_y),
+                Vector2f::new(1.5, 1.0),
             ))
             .with(ColliderComponent::new(
                 Cuboid::new(Vector2d::new(
@@ -184,47 +239,6 @@ pub fn create_activity_ents(world: &mut World) {
         layout_pos_y += 100.0;
     }
 
-    /*
-    let collision_groups = CollisionGroups::new();
-        world
-            .create_entity()
-            .with(TransformComponent::new(
-                Vector2d::new(340.0, 350.0),
-                Vector2f::new(1.5, 1.0),
-            ))
-            .with(ColliderComponent::new(
-                Cuboid::new(Vector2d::new(
-                    (240.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
-                    (96.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
-                )),
-                Vector2d::zeros(),
-                collision_groups,
-                0.0,
-            ))
-            .with(ActivityComponent::new(Activity {
-                name: String::from("Go Fishing"),
-                hours_required: 2,
-                event: GameEvent::ActivityGoFishing,
-                effects: vec![StatEffect::Add { stat: Stat::Food, amount: 1 }],
-                is_repeatable: true,
-            }))
-            .with(ClickableComponent::new())
-            .with(SpriteComponent::new(
-                SpriteRegion {
-                    x: 0,
-                    y: 160,
-                    w: 160,
-                    h: 96,
-                },
-                resources::TEX_SPRITESHEET_UI,
-                Point2f::origin(),
-                COLOR_WHITE,
-                layers::LAYER_BUTTONS,
-                Transparency::Opaque,
-            ))
-            .build();
-    */
-
     world.write_resource::<ActivityState>().is_rebuild_required = false;
 }
 
@@ -232,7 +246,11 @@ pub fn create_activity_ents(world: &mut World) {
 pub struct ActivityInfoRenderSystem;
 
 impl<'a> System<'a> for ActivityInfoRenderSystem {
-    type SystemData = (Write<'a, RenderState>, ReadStorage<'a, TransformComponent>, ReadStorage<'a, ActivityComponent>);
+    type SystemData = (
+        Write<'a, RenderState>,
+        ReadStorage<'a, TransformComponent>,
+        ReadStorage<'a, ActivityComponent>,
+    );
 
     fn run(&mut self, (mut render, transforms, activity_comps): Self::SystemData) {
         for (transform, activity) in (&transforms, &activity_comps).join() {
@@ -242,29 +260,15 @@ impl<'a> System<'a> for ActivityInfoRenderSystem {
             render.bind_layer(layers::LAYER_UI);
             render.bind_texture(resources::TEX_FONT);
             render.bind_color(COLOR_BLACK);
-            render.text(
-                x,
-                y,
-                8,
-                16,
-                1.2,
-                &activity.activity.name,
-            );
+            render.text(x, y, 8, 16, 1.2, &activity.activity.name);
 
-            let hours_text =  if activity.activity.hours_required == 1 {
+            let hours_text = if activity.activity.hours_required == 1 {
                 format!("{} hour", activity.activity.hours_required)
             } else {
                 format!("{} hours", activity.activity.hours_required)
             };
 
-            render.text(
-                x,
-                y + 20.0,
-                8,
-                16,
-                1.0,
-                &hours_text,
-            );
+            render.text(x, y + 20.0, 8, 16, 1.0, &hours_text);
 
             let effect_text = {
                 let mut str = String::new();
@@ -288,13 +292,7 @@ impl<'a> System<'a> for ActivityInfoRenderSystem {
                 str
             };
 
-            render.text(
-                x, y + 40.0,
-                8,
-                16,
-                1.0,
-                &effect_text,
-            )
+            render.text(x, y + 40.0, 8, 16, 1.0, &effect_text)
         }
     }
 }

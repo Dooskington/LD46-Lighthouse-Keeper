@@ -1,7 +1,7 @@
 use crate::game::*;
 use specs::prelude::*;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum TimeOfDay {
     Morning,
     Afternoon,
@@ -74,43 +74,48 @@ impl<'a> System<'a> for TimeSystem {
         // NOTE (declan, 4/18/20)
         // what am I thinking
         let mut did_new_day_start = false;
-        let mut should_refresh_activities = false;
+        let mut did_new_time_of_day_start = false;
 
-        for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()).cloned() {
+        for event in game_events
+            .read(&mut self.game_event_reader.as_mut().unwrap())
+            .cloned()
+        {
             match event {
                 GameEvent::NewGameStarted => {
-                    should_refresh_activities = true;
-                },
+                    did_new_time_of_day_start = true;
+                }
                 GameEvent::ProgressTime { hours } => {
                     time.hours_passed += hours;
                     if time.hours_passed >= 4 {
                         time.hours_passed -= 4;
                         time.time_of_day.progress();
-                        should_refresh_activities = true;
+                        did_new_time_of_day_start = true;
 
                         if time.time_of_day == TimeOfDay::Morning {
                             did_new_day_start = true;
                             time.day += 1;
                         }
                     }
-                },
+                }
                 _ => {}
             }
         }
 
         if did_new_day_start {
             println!("A new day begins.");
-            game_events.single_write(GameEvent::NewDayStarted);
+            game_events.single_write(GameEvent::NewDayStarted { day: time.day });
         }
 
-        if should_refresh_activities {
+        if did_new_time_of_day_start {
             match time.time_of_day {
                 TimeOfDay::Morning => println!("The cool sea air wakes you from slumber."),
                 TimeOfDay::Afternoon => println!("The sun rises high in the sky."),
                 TimeOfDay::Night => println!("The darkness of night creeps upon your lonely isle."),
             }
 
-            game_events.single_write(GameEvent::RefreshActivities);
+            game_events.single_write(GameEvent::NewTimeOfDayStarted {
+                time_of_day: time.time_of_day,
+            });
         }
     }
 }
@@ -136,7 +141,7 @@ impl<'a> System<'a> for TimeInfoRenderSystem {
                 x: 0,
                 y: 0,
                 w: 320,
-                h: 160
+                h: 160,
             },
         );
 
@@ -145,31 +150,31 @@ impl<'a> System<'a> for TimeInfoRenderSystem {
                 x: 320,
                 y: 0,
                 w: 288,
-                h: 64
+                h: 64,
             },
             1 => SpriteRegion {
                 x: 320,
                 y: 64,
                 w: 288,
-                h: 64
+                h: 64,
             },
             2 => SpriteRegion {
                 x: 320,
                 y: 128,
                 w: 288,
-                h: 64
+                h: 64,
             },
             3 => SpriteRegion {
                 x: 320,
                 y: 192,
                 w: 288,
-                h: 64
+                h: 64,
             },
             _ => SpriteRegion {
                 x: 320,
                 y: 256,
                 w: 288,
-                h: 64
+                h: 64,
             },
         };
 
@@ -186,19 +191,19 @@ impl<'a> System<'a> for TimeInfoRenderSystem {
                 x: 0,
                 y: 256,
                 w: 64,
-                h: 64
+                h: 64,
             },
             TimeOfDay::Afternoon => SpriteRegion {
                 x: 64,
                 y: 256,
                 w: 64,
-                h: 64
+                h: 64,
             },
             _ => SpriteRegion {
                 x: 128,
                 y: 256,
                 w: 64,
-                h: 64
+                h: 64,
             },
         };
 
@@ -215,22 +220,8 @@ impl<'a> System<'a> for TimeInfoRenderSystem {
         render.bind_transparency(Transparency::Opaque);
         render.bind_texture(resources::TEX_FONT);
         render.bind_color(COLOR_BLACK);
-        render.text(
-            8.0,
-            8.0,
-            8,
-            16,
-            2.0,
-            &format!("Day {}", time.day),
-        );
+        render.text(8.0, 8.0, 8, 16, 2.0, &format!("Day {}", time.day));
 
-        render.text(
-            8.0,
-            48.0,
-            8,
-            16,
-            1.5,
-            &format!("{}", time.time_of_day),
-        );
+        render.text(8.0, 48.0, 8, 16, 1.5, &format!("{}", time.time_of_day));
     }
 }
