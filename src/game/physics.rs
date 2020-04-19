@@ -410,8 +410,8 @@ impl<'a> System<'a> for ColliderSendPhysicsSystem {
             if let Some(sprite) = sprites.get(ent) {
                 let dist_x = 0.5 - (sprite.pivot.x as f64);
                 let dist_y = 0.5 - (sprite.pivot.y as f64);
-                collider.center.x = dist_x * (sprite.region.w as f64);
-                collider.center.y = dist_y * (sprite.region.h as f64);
+                collider.center.x = dist_x * (sprite.region.w as f64 * transform.scale.x as f64);
+                collider.center.y = dist_y * (sprite.region.h as f64 * transform.scale.y as f64);
             }
 
             // If this entity has a rigidbody, we need to attach the collider to it.

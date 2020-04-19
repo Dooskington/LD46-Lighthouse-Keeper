@@ -34,9 +34,9 @@ impl std::fmt::Display for TimeOfDay {
 }
 
 pub struct TimeState {
-    day: i32,
-    time_of_day: TimeOfDay,
-    hours_passed: i32,
+    pub day: i32,
+    pub time_of_day: TimeOfDay,
+    pub hours_passed: i32,
 }
 
 impl TimeState {
@@ -44,7 +44,7 @@ impl TimeState {
         TimeState {
             day: 1,
             time_of_day: TimeOfDay::Morning,
-            hours_passed: 4,
+            hours_passed: 0,
         }
     }
 }
@@ -81,10 +81,10 @@ impl<'a> System<'a> for TimeSystem {
                 GameEvent::NewGameStarted => {
                     should_refresh_activities = true;
                 },
-                GameEvent::ProgressTime => {
-                    time.hours_passed += 1;
+                GameEvent::ProgressTime { hours } => {
+                    time.hours_passed += hours;
                     if time.hours_passed >= 4 {
-                        time.hours_passed = 0;
+                        time.hours_passed -= 4;
                         time.time_of_day.progress();
                         should_refresh_activities = true;
 

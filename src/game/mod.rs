@@ -37,12 +37,14 @@ pub const PIXELS_TO_WORLD_UNITS: f64 = (1.0 / PIXELS_PER_WORLD_UNIT as f64);
 pub enum GameEvent {
     NewGameStarted,
     NewDayStarted,
-    ProgressTime,
+    ProgressTime { hours: i32 },
     PayDay,
     MerchantArrived,
     StarvationGameOver,
     InsanityGameOver,
     RefreshActivities,
+    ActivityGoFishing,
+    ActivityPerformMaintenance,
 }
 
 pub struct GameState<'a, 'b> {
@@ -62,15 +64,17 @@ impl<'a, 'b> GameState<'a, 'b> {
         world.insert(StatsState::new());
         world.insert(AudioAssetDb::new());
         world.insert(EventChannel::<CollisionEvent>::new());
+        world.insert(EventChannel::<OnClickedEvent>::new());
         world.insert(EventChannel::<GameEvent>::new());
 
         let mut tick_dispatcher = DispatcherBuilder::new()
             .with(ClickableSystem::default(), "clickable", &[])
             .with(TimeSystem::default(), "time", &[])
             .with(StatsSystem::default(), "stats", &[])
-            .with(ActivitySystem::default(), "activity", &[])
+            .with(ActivitySystem::default(), "activity", &["clickable"])
             .with_thread_local(TimeInfoRenderSystem::default())
             .with_thread_local(StatsInfoRenderSystem::default())
+            .with_thread_local(ActivityInfoRenderSystem::default())
             .with_thread_local(SpriteRenderSystem::default())
             .build();
 
@@ -98,25 +102,30 @@ impl<'a, 'b> GameState<'a, 'b> {
 }
 
 fn build_scene(world: &mut World, width: u32, height: u32) {
+    // todo "building scene" is now just handled via the activity system.
+
     let collision_groups = CollisionGroups::new();
         world
             .create_entity()
             .with(TransformComponent::new(
-                Vector2d::new(16.0, 200.0),
-                Vector2f::new(1.0, 1.0),
+                Vector2d::new(350.0, 350.0),
+                Vector2f::new(1.5, 1.0),
             ))
             .with(ColliderComponent::new(
                 Cuboid::new(Vector2d::new(
-                    (160.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                    (240.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
                     (96.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
                 )),
                 Vector2d::zeros(),
                 collision_groups,
                 0.0,
             ))
-            .with(ClickableComponent::new(Some(
-                GameEvent::ProgressTime,
-            )))
+            .with(ActivityComponent::new(Activity {
+                name: String::from("Go Fishing"),
+                hours_required: 2,
+                event: GameEvent::ActivityPerformMaintenance,
+            }))
+            .with(ClickableComponent::new())
             .with(SpriteComponent::new(
                 SpriteRegion {
                     x: 0,
@@ -132,121 +141,41 @@ fn build_scene(world: &mut World, width: u32, height: u32) {
             ))
             .build();
 
-    /*
-    // Testing buttons
-    let collision_groups = CollisionGroups::new();
-    world
-        .create_entity()
-        .with(TransformComponent::new(
-            Vector2d::new(180.0, 360.0),
-            Vector2f::new(1.0, 1.0),
-        ))
-        .with(ColliderComponent::new(
-            Cuboid::new(Vector2d::new(
-                (49.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
-                (49.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
-            )),
-            Vector2d::zeros(),
-            collision_groups,
-            0.0,
-        ))
-        .with(ClickableComponent::new(Some(
-            WorkstationEvent::LowerTemperature,
-        )))
-        .with(SpriteComponent::new(
-            SpriteRegion {
-                x: 0,
-                y: 0,
-                w: 49,
-                h: 49,
-            },
-            resources::TEX_SPRITESHEET_BUTTONS,
-            Point2f::origin(),
-            COLOR_WHITE,
-            layers::LAYER_WORKSTATION_CONTROLS,
-            Transparency::Opaque,
-        ))
-        .build();
-
-    world
-        .create_entity()
-        .with(TransformComponent::new(
-            Vector2d::new(180.0, 300.0),
-            Vector2f::new(1.0, 1.0),
-        ))
-        .with(ColliderComponent::new(
-            Cuboid::new(Vector2d::new(
-                (49.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
-                (49.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
-            )),
-            Vector2d::zeros(),
-            collision_groups,
-            0.0,
-        ))
-        .with(ClickableComponent::new(Some(
-            WorkstationEvent::RaiseTemperature,
-        )))
-        .with(SpriteComponent::new(
-            SpriteRegion {
-                x: 0,
-                y: 0,
-                w: 49,
-                h: 49,
-            },
-            resources::TEX_SPRITESHEET_BUTTONS,
-            Point2f::origin(),
-            COLOR_WHITE,
-            layers::LAYER_WORKSTATION_CONTROLS,
-            Transparency::Opaque,
-        ))
-        .build();
-
-    // Alien
-    world
-        .create_entity()
-        .with(TransformComponent::new(
-            Vector2d::new(width as f64 / 2.0, (height as f64 / 2.0) - 64.0),
-            Vector2f::new(1.0, 1.0),
-        ))
-        .with(SpriteComponent::new(
-            SpriteRegion {
-                x: 0,
-                y: 0,
-                w: 56,
-                h: 56,
-            },
-            resources::TEX_SPRITESHEET_ALIEN,
-            Point2f::new(0.5, 0.5),
-            COLOR_WHITE,
-            layers::LAYER_LAB,
-            Transparency::Opaque,
-        ))
-        .with(AlienComponent::new())
-        .build();
-
-    // Probe Injector
-    world
-        .create_entity()
-        .with(TransformComponent::new(
-            Vector2d::new(width as f64 - 64.0, 0.0),
-            Vector2f::new(1.0, 1.0),
-        ))
-        .with(SpriteComponent::new(
-            SpriteRegion {
-                x: 0,
-                y: 0,
-                w: 256,
-                h: 256,
-            },
-            resources::TEX_PROBE,
-            Point2f::new(0.5, 0.0),
-            COLOR_WHITE,
-            layers::LAYER_LAB,
-            Transparency::Opaque,
-        ))
-        //.with(ProbeComponent::new())
-        .build();
-        */
+        world
+            .create_entity()
+            .with(TransformComponent::new(
+                Vector2d::new(350.0, 450.0),
+                Vector2f::new(1.5, 1.0),
+            ))
+            .with(ColliderComponent::new(
+                Cuboid::new(Vector2d::new(
+                    (240.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                    (96.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                )),
+                Vector2d::zeros(),
+                collision_groups,
+                0.0,
+            ))
+            .with(ActivityComponent::new(Activity {
+                name: String::from("Perform Maintenance"),
+                hours_required: 3,
+                event: GameEvent::ActivityGoFishing,
+            }))
+            .with(ClickableComponent::new())
+            .with(SpriteComponent::new(
+                SpriteRegion {
+                    x: 0,
+                    y: 160,
+                    w: 160,
+                    h: 96,
+                },
+                resources::TEX_SPRITESHEET_UI,
+                Point2f::origin(),
+                COLOR_WHITE,
+                layers::LAYER_BUTTONS,
+                Transparency::Opaque,
+            ))
+            .build();
 }
 
 fn lerp(start: f32, end: f32, percentage: f32) -> f32 {

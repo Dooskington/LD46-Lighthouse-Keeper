@@ -4,6 +4,7 @@ use game::{
     audio::{AudioAssetDb, AudioAssetId},
     physics::PhysicsState,
     render::RenderState,
+    time::*,
     resources::*,
     GameState,
 };
@@ -49,6 +50,11 @@ fn main() {
                     "res/textures/lighthouse-bg.png",
                     renderer,
                 );
+                import_texture(
+                    game::resources::TEX_BG_LIGHTHOUSE_LIGHT,
+                    "res/textures/lighthouse-light-bg.png",
+                    renderer,
+                );
             }
 
             // TODO
@@ -88,6 +94,17 @@ fn main() {
             render.bind_transparency(Transparency::Opaque);
             render.bind_texture(game::resources::TEX_BG_LIGHTHOUSE);
             render.textured_quad((0.0, window_height as f32), (window_width as f32, window_height as f32), (0.0, 0.0), (window_width as f32, 0.0));
+
+            // Lighthouse light (during night)
+            if game.world.read_resource::<TimeState>().time_of_day == TimeOfDay::Night {
+                // TODO
+                // Don't do this if the StatsState says that the lighthouse isn't working
+
+                render.bind_layer(game::layers::LAYER_BG + 1);
+                render.bind_transparency(Transparency::Opaque);
+                render.bind_texture(game::resources::TEX_BG_LIGHTHOUSE_LIGHT);
+                render.textured_quad((0.0, window_height as f32), (window_width as f32, window_height as f32), (0.0, 0.0), (window_width as f32, 0.0));
+            }
 
             // Process commands into batches and send to the renderer
             let batches = renderer.process_commands(render.commands());

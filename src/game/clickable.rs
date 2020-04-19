@@ -3,6 +3,10 @@ use gfx::input::*;
 use ncollide2d::pipeline::CollisionGroups;
 use specs::prelude::*;
 
+pub struct OnClickedEvent {
+    pub ent: Entity,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum ClickableState {
     Normal,
@@ -12,14 +16,12 @@ enum ClickableState {
 
 pub struct ClickableComponent {
     state: ClickableState,
-    on_click_event: Option<GameEvent>,
 }
 
 impl ClickableComponent {
-    pub fn new(on_click_event: Option<GameEvent>) -> Self {
+    pub fn new() -> Self {
         ClickableComponent {
             state: ClickableState::Normal,
-            on_click_event,
         }
     }
 }
@@ -36,7 +38,7 @@ impl<'a> System<'a> for ClickableSystem {
         Entities<'a>,
         ReadExpect<'a, InputState>,
         ReadExpect<'a, PhysicsState>,
-        WriteExpect<'a, EventChannel<GameEvent>>,
+        WriteExpect<'a, EventChannel<OnClickedEvent>>,
         WriteStorage<'a, ClickableComponent>,
     );
 
@@ -46,7 +48,7 @@ impl<'a> System<'a> for ClickableSystem {
 
     fn run(
         &mut self,
-        (ents, input, physics, mut workstation_events, mut clickables): Self::SystemData,
+        (ents, input, physics, mut on_clicked_events, mut clickables): Self::SystemData,
     ) {
         // Gather all ents hit by the mouse
         let mut cursor_hit_ents = BitSet::new();
@@ -66,15 +68,21 @@ impl<'a> System<'a> for ClickableSystem {
             cursor_hit_ents.add(hit_ent.id());
         }
 
+        // How do we change the sprite state?
+        // Could just grab the sprite components
+        // new field on clickable component
+        // hovered_sprite: Option<SpriteRegion>
+        // clicked_sprite: Option<SpriteRegion>
+        // at the end of the loop, set the sprite based on the ClickableState
+        // (if normal_sprite is none, just set it to whatever the sprite is right now)
+
         for (ent, clickable) in (&ents, &mut clickables).join() {
             if cursor_hit_ents.contains(ent.id()) {
                 if input.is_mouse_button_held(MouseButton::Left) {
                     if clickable.state != ClickableState::Clicked {
                         //println!("clicked");
                         clickable.state = ClickableState::Clicked;
-                        if let Some(event) = clickable.on_click_event {
-                            workstation_events.single_write(event);
-                        }
+                        on_clicked_events.single_write(OnClickedEvent { ent });
                     }
                 } else {
                     if clickable.state != ClickableState::Hovered {

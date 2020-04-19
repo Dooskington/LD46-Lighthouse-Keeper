@@ -1,6 +1,19 @@
 use crate::game::*;
 use specs::prelude::*;
 
+pub enum StatEffect {
+    Add { stat: Stat, amount: i32 },
+    Subtract { stat: Stat, amount: i32 },
+}
+
+pub enum Stat {
+    Sanity,
+    Food,
+    Gas,
+    Parts,
+    Money,
+}
+
 pub struct StatsState {
     sanity: i32,
     food: i32,
@@ -174,6 +187,16 @@ impl<'a> System<'a> for StatsInfoRenderSystem {
             16,
             1.0,
             &format!("{}", stats.gas),
+        );
+
+        // Money text
+        render.text(
+            160.0,
+            8.0,
+            8,
+            16,
+            1.5,
+            &format!("${}", 23),
         );
     }
 }
