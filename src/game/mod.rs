@@ -7,7 +7,9 @@ pub mod resources;
 pub mod transform;
 pub mod time;
 pub mod stats;
+pub mod activity;
 
+use activity::*;
 use stats::*;
 use time::*;
 use audio::AudioAssetDb;
@@ -33,7 +35,14 @@ pub const PIXELS_TO_WORLD_UNITS: f64 = (1.0 / PIXELS_PER_WORLD_UNIT as f64);
 
 #[derive(Clone, Copy, Debug)]
 pub enum GameEvent {
+    NewGameStarted,
+    NewDayStarted,
     ProgressTime,
+    PayDay,
+    MerchantArrived,
+    StarvationGameOver,
+    InsanityGameOver,
+    RefreshActivities,
 }
 
 pub struct GameState<'a, 'b> {
@@ -58,6 +67,8 @@ impl<'a, 'b> GameState<'a, 'b> {
         let mut tick_dispatcher = DispatcherBuilder::new()
             .with(ClickableSystem::default(), "clickable", &[])
             .with(TimeSystem::default(), "time", &[])
+            .with(StatsSystem::default(), "stats", &[])
+            .with(ActivitySystem::default(), "activity", &[])
             .with_thread_local(TimeInfoRenderSystem::default())
             .with_thread_local(StatsInfoRenderSystem::default())
             .with_thread_local(SpriteRenderSystem::default())
@@ -73,6 +84,8 @@ impl<'a, 'b> GameState<'a, 'b> {
             .build();
 
         physics_dispatcher.setup(&mut world);
+
+        world.write_resource::<EventChannel<GameEvent>>().single_write(GameEvent::NewGameStarted);
 
         build_scene(&mut world, width, height);
 

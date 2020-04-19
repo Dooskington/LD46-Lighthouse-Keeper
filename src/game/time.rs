@@ -56,7 +56,7 @@ pub struct TimeSystem {
 
 impl<'a> System<'a> for TimeSystem {
     type SystemData = (
-        ReadExpect<'a, EventChannel<GameEvent>>,
+        WriteExpect<'a, EventChannel<GameEvent>>,
         WriteExpect<'a, TimeState>,
     );
 
@@ -70,23 +70,47 @@ impl<'a> System<'a> for TimeSystem {
         );
     }
 
-    fn run(&mut self, (game_events, mut time): Self::SystemData) {
-        for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()) {
+    fn run(&mut self, (mut game_events, mut time): Self::SystemData) {
+        // NOTE (declan, 4/18/20)
+        // what am I thinking
+        let mut did_new_day_start = false;
+        let mut should_refresh_activities = false;
+
+        for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()).cloned() {
             match event {
+                GameEvent::NewGameStarted => {
+                    should_refresh_activities = true;
+                },
                 GameEvent::ProgressTime => {
                     time.hours_passed += 1;
                     if time.hours_passed >= 4 {
                         time.hours_passed = 0;
                         time.time_of_day.progress();
+                        should_refresh_activities = true;
 
                         if time.time_of_day == TimeOfDay::Morning {
-                            println!("A new day dawns.");
+                            did_new_day_start = true;
                             time.day += 1;
                         }
                     }
                 },
                 _ => {}
             }
+        }
+
+        if did_new_day_start {
+            println!("A new day begins.");
+            game_events.single_write(GameEvent::NewDayStarted);
+        }
+
+        if should_refresh_activities {
+            match time.time_of_day {
+                TimeOfDay::Morning => println!("The cool sea air wakes you from slumber."),
+                TimeOfDay::Afternoon => println!("The sun rises high in the sky."),
+                TimeOfDay::Night => println!("The darkness of night creeps upon your lonely isle."),
+            }
+
+            game_events.single_write(GameEvent::RefreshActivities);
         }
     }
 }
