@@ -77,7 +77,7 @@ impl<'a> System<'a> for ActivitySystem {
     ) {
         for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()) {
             match event {
-                GameEvent::NewTimeOfDayStarted { .. } => {
+                GameEvent::NewTimeOfDayStarted { .. } | GameEvent::GameOver => {
                     println!("Refreshing activities (remove this)");
 
                     activity_state.is_rebuild_required = true;
@@ -171,9 +171,26 @@ pub fn create_activities() -> Vec<Activity> {
             conditions: vec![],
         },
         Activity {
-            name: String::from("End Game (TODO)"),
+            name: String::from("Hunt Rats"),
             hours_required: 1,
-            event: GameEvent::FinalDayGameWin,
+            event: GameEvent::ActivityHuntRats,
+            effects: vec![
+                StatEffect::Subtract {
+                    stat: Stat::Sanity,
+                    amount: 1,
+                },
+                StatEffect::Add {
+                    stat: Stat::Food,
+                    amount: 1,
+                },
+            ],
+            is_repeatable: false,
+            conditions: vec![GameCondition::Starving],
+        },
+        Activity {
+            name: String::from("End Game (TODO)"),
+            hours_required: 0,
+            event: GameEvent::GameOver,
             effects: vec![],
             is_repeatable: false,
             conditions: vec![GameCondition::FinalDay],
@@ -193,15 +210,37 @@ pub fn create_activity_ents(world: &mut World) {
     world.delete_all();
     world.maintain();
 
+    if world.read_resource::<StatsState>().condition(GameCondition::GameOver) {
+        // Don't create new activities if the game is over
+        return;
+    }
+
     let activities = world.read_resource::<ActivityState>().activities.clone();
     let layout_pos_x = 340.0;
     let mut layout_pos_y = 350.0;
     for activity in activities {
         let mut are_conditions_satisfied = true;
-        for condition in activity.conditions.iter() {
-            if !world.read_resource::<StatsState>().condition(*condition) {
-                are_conditions_satisfied = false;
-                break;
+
+        // TODO need to re-evaluate conditions and stuff every time an activity is triggered...
+        {
+            let stats = world.read_resource::<StatsState>();
+            for condition in activity.conditions.iter() {
+                if !stats.condition(*condition) {
+                    are_conditions_satisfied = false;
+                    break;
+                }
+            }
+
+            for effect in activity.effects.iter() {
+                match effect {
+                    StatEffect::Subtract { stat, amount } => {
+                        if stats.stat(*stat) < *amount {
+                            are_conditions_satisfied = false;
+                            break;
+                        }
+                    },
+                    _ => {}
+                }
             }
         }
 
@@ -248,11 +287,12 @@ pub struct ActivityInfoRenderSystem;
 impl<'a> System<'a> for ActivityInfoRenderSystem {
     type SystemData = (
         Write<'a, RenderState>,
+        ReadExpect<'a, StatsState>,
         ReadStorage<'a, TransformComponent>,
         ReadStorage<'a, ActivityComponent>,
     );
 
-    fn run(&mut self, (mut render, transforms, activity_comps): Self::SystemData) {
+    fn run(&mut self, (mut render, stats, transforms, activity_comps): Self::SystemData) {
         for (transform, activity) in (&transforms, &activity_comps).join() {
             let x = transform.position.x as f32 + 16.0;
             let y = transform.position.y as f32 + 12.0;
@@ -293,6 +333,40 @@ impl<'a> System<'a> for ActivityInfoRenderSystem {
             };
 
             render.text(x, y + 40.0, 8, 16, 1.0, &effect_text)
+        }
+
+        // Game Over screen
+        if stats.condition(GameCondition::GameOver) {
+            // Window background
+            render.bind_transparency(Transparency::Opaque);
+            render.bind_texture(resources::TEX_SPRITESHEET_UI);
+            render.bind_color(COLOR_WHITE);
+            render.bind_layer(layers::LAYER_UI);
+            render.sprite(
+                0.0,
+                400.0,
+                Point2f::new(0.5, 0.5),
+                Vector2f::new(2.0, 2.0),
+                SpriteRegion {
+                    x: 0,
+                    y: 160,
+                    w: 160,
+                    h: 96,
+                },
+            );
+
+            // Render tex
+            render.bind_texture(resources::TEX_FONT);
+            render.bind_color(COLOR_BLACK);
+            render.text(16.0, 400.0 + 16.0, 8, 16, 2.0, "Game Over");
+            render.text(
+                16.0,
+                450.0,
+                8,
+                16,
+                1.0,
+                &format!("{}", "TODO"),
+            );
         }
     }
 }

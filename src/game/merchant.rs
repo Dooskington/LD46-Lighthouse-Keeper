@@ -71,6 +71,10 @@ impl<'a> System<'a> for MerchantSystem {
             }
         }
 
+        if stats.condition(GameCondition::GameOver) {
+            return;
+        }
+
         if merchant_state.has_arrived {
             // TODO randomize these every arrival or something
             let food_price = 2;

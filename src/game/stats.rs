@@ -93,22 +93,14 @@ impl<'a> System<'a> for StatsSystem {
 
     fn run(&mut self, (game_events, mut stats): Self::SystemData) {
         // TODO
-        // intercept NewDayStarted events
-        // every day, consume 1 food [x]
         // every 2 days, consume gasoline and flag generator as empty
-        // every 4-7 days, merchant arrives
 
         for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()) {
             match event {
+                GameEvent::GameOver => {
+                    stats.set_condition(GameCondition::GameOver, true);
+                }
                 GameEvent::NewDayStarted { day } => {
-                    stats.add(Stat::Food, -1);
-                    if stats.stat(Stat::Food) <= 0 {
-                        // TODO
-                        println!("out of food GAME OVER");
-                    }
-
-                    println!("You unpack the days rations from food storage. (Food -1)");
-
                     // TODO only get paid for each day the lighthouse is on
                     if (day % 5) == 0 {
                         stats.add(Stat::Money, 5);
@@ -116,6 +108,26 @@ impl<'a> System<'a> for StatsSystem {
                     }
 
                     stats.set_condition(GameCondition::FinalDay, *day >= 30);
+
+                    // Handle food consumption
+                    if !stats.condition(GameCondition::Starving) {
+                        if stats.stat(Stat::Food) <= 0 {
+                            stats.set_condition(GameCondition::Starving, true);
+                            println!("You are starving.");
+                            continue;
+                        }
+
+                        println!("You unpack the days rations from food storage. (Food -1)");
+                        stats.add(Stat::Food, -1);
+                    } else {
+                        if stats.stat(Stat::Food) <= 0 {
+                            println!("You collapse due to starvation.");
+                            stats.set_condition(GameCondition::GameOver, true);
+                            continue;
+                        }
+
+                        stats.set_condition(GameCondition::Starving, false);
+                    }
                 }
                 GameEvent::HandleStatEffects { effects } => {
                     for effect in effects {

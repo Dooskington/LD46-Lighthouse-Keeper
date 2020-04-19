@@ -43,21 +43,23 @@ pub enum GameEvent {
     ProgressTime { hours: i32 },
     HandleStatEffects { effects: Vec<StatEffect> },
     MerchantArrived,
-    StarvationGameOver,
-    InsanityGameOver,
+    GameOver,
     FinalDayGameWin,
     ActivityGoFishing,
     ActivityPerformMaintenance,
     ActivityPrayToJand,
     ActivityDrinkAlcobev,
+    ActivityHuntRats,
 }
 
 #[derive(Clone, Copy, Hash, Eq, PartialEq)]
 pub enum GameCondition {
     FinalDay,
+    GameOver,
     GeneratorBroken,
     LensBroken,
     LighthouseDamaged,
+    Starving,
 }
 
 pub struct GameState<'a, 'b> {
