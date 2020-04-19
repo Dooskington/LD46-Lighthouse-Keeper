@@ -6,7 +6,9 @@ pub mod render;
 pub mod resources;
 pub mod transform;
 pub mod time;
+pub mod stats;
 
+use stats::*;
 use time::*;
 use audio::AudioAssetDb;
 use clickable::*;
@@ -48,6 +50,7 @@ impl<'a, 'b> GameState<'a, 'b> {
         world.insert(RenderState::new());
         world.insert(PhysicsState::new());
         world.insert(TimeState::new());
+        world.insert(StatsState::new());
         world.insert(AudioAssetDb::new());
         world.insert(EventChannel::<CollisionEvent>::new());
         world.insert(EventChannel::<GameEvent>::new());
@@ -56,6 +59,7 @@ impl<'a, 'b> GameState<'a, 'b> {
             .with(ClickableSystem::default(), "clickable", &[])
             .with(TimeSystem::default(), "time", &[])
             .with_thread_local(TimeInfoRenderSystem::default())
+            .with_thread_local(StatsInfoRenderSystem::default())
             .with_thread_local(SpriteRenderSystem::default())
             .build();
 

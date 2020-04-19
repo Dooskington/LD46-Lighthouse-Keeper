@@ -24,7 +24,7 @@ impl std::fmt::Display for TimeOfDay {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let printable = match *self {
             TimeOfDay::Morning => "Morning",
-            TimeOfDay::Afternoon => "Afternoon",
+            TimeOfDay::Afternoon => "Noon",
             TimeOfDay::Night => "Night",
             _ => "Unknown",
         };
@@ -116,7 +116,7 @@ impl<'a> System<'a> for TimeInfoRenderSystem {
             },
         );
 
-        let hours_bar_region = match time.hours_passed {
+        let hours_bar_sprite_region = match time.hours_passed {
             0 => SpriteRegion {
                 x: 320,
                 y: 0,
@@ -154,7 +154,36 @@ impl<'a> System<'a> for TimeInfoRenderSystem {
             73.0,
             Point2f::origin(),
             Vector2f::new(0.5, 0.5),
-            hours_bar_region,
+            hours_bar_sprite_region,
+        );
+
+        let time_of_day_sprite_region = match time.time_of_day {
+            TimeOfDay::Morning => SpriteRegion {
+                x: 0,
+                y: 256,
+                w: 64,
+                h: 64
+            },
+            TimeOfDay::Afternoon => SpriteRegion {
+                x: 64,
+                y: 256,
+                w: 64,
+                h: 64
+            },
+            _ => SpriteRegion {
+                x: 128,
+                y: 256,
+                w: 64,
+                h: 64
+            },
+        };
+
+        render.sprite(
+            100.0,
+            45.0,
+            Point2f::new(0.0, 0.0),
+            Vector2f::new(0.5, 0.5),
+            time_of_day_sprite_region,
         );
 
         // Day Text
