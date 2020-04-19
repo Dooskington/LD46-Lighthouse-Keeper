@@ -50,6 +50,7 @@ impl<'a> System<'a> for ActivitySystem {
     type SystemData = (
         Entities<'a>,
         WriteExpect<'a, ActivityState>,
+        ReadExpect<'a, StatsState>,
         ReadExpect<'a, EventChannel<OnClickedEvent>>,
         WriteExpect<'a, EventChannel<GameEvent>>,
         ReadStorage<'a, ActivityComponent>,
@@ -73,13 +74,11 @@ impl<'a> System<'a> for ActivitySystem {
 
     fn run(
         &mut self,
-        (ents, mut activity_state, on_clicked_events, mut game_events, activity_comps): Self::SystemData,
+        (ents, mut activity_state, stats, on_clicked_events, mut game_events, activity_comps): Self::SystemData,
     ) {
         for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()) {
             match event {
-                GameEvent::NewTimeOfDayStarted { .. } | GameEvent::GameOver => {
-                    println!("Refreshing activities (remove this)");
-
+                GameEvent::NewTimeOfDayStarted { .. } | GameEvent::GameOver | GameEvent::RefreshActivities => {
                     activity_state.is_rebuild_required = true;
                 }
                 GameEvent::ActivityGoFishing => {
@@ -95,6 +94,12 @@ impl<'a> System<'a> for ActivitySystem {
                 }
                 GameEvent::ActivityDrinkAlcobev => {
                     println!("You have a drink to dull the pain.");
+                }
+                GameEvent::ActivityHuntRats => {
+                    println!("You hunt some of the scrawny rats that scurry about the lighthouse.");
+                }
+                GameEvent::ActivityTinker => {
+                    println!("You tinker with some parts.");
                 }
                 _ => {}
             }
@@ -113,6 +118,8 @@ impl<'a> System<'a> for ActivitySystem {
                 if !comp.activity.is_repeatable {
                     ents.delete(event.ent).unwrap();
                 }
+
+                game_events.single_write(GameEvent::RefreshActivities);
             }
         }
     }
@@ -133,7 +140,7 @@ pub fn create_activities() -> Vec<Activity> {
         },
         Activity {
             name: String::from("Perform Maintenance"),
-            hours_required: 3,
+            hours_required: 2,
             event: GameEvent::ActivityPerformMaintenance,
             effects: vec![StatEffect::Subtract {
                 stat: Stat::Parts,
@@ -177,7 +184,7 @@ pub fn create_activities() -> Vec<Activity> {
             effects: vec![
                 StatEffect::Subtract {
                     stat: Stat::Sanity,
-                    amount: 1,
+                    amount: 3,
                 },
                 StatEffect::Add {
                     stat: Stat::Food,
@@ -194,6 +201,17 @@ pub fn create_activities() -> Vec<Activity> {
             effects: vec![],
             is_repeatable: false,
             conditions: vec![GameCondition::FinalDay],
+        },
+        Activity {
+            name: String::from("Tinker (TODO)"),
+            hours_required: 1,
+            event: GameEvent::ActivityTinker,
+            effects: vec![StatEffect::Subtract {
+                stat: Stat::Parts,
+                amount: 1,
+            }],
+            is_repeatable: true,
+            conditions: vec![],
         },
     ]
 }
@@ -220,8 +238,6 @@ pub fn create_activity_ents(world: &mut World) {
     let mut layout_pos_y = 350.0;
     for activity in activities {
         let mut are_conditions_satisfied = true;
-
-        // TODO need to re-evaluate conditions and stuff every time an activity is triggered...
         {
             let stats = world.read_resource::<StatsState>();
             for condition in activity.conditions.iter() {

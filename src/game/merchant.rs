@@ -35,7 +35,7 @@ impl<'a> System<'a> for MerchantSystem {
         WriteExpect<'a, StatsState>,
         ReadExpect<'a, InputState>,
         WriteExpect<'a, MerchantState>,
-        ReadExpect<'a, EventChannel<GameEvent>>,
+        WriteExpect<'a, EventChannel<GameEvent>>,
     );
 
     fn setup(&mut self, world: &mut World) {
@@ -48,7 +48,7 @@ impl<'a> System<'a> for MerchantSystem {
         );
     }
 
-    fn run(&mut self, (mut render, mut stats, input, mut merchant_state, game_events): Self::SystemData) {
+    fn run(&mut self, (mut render, mut stats, input, mut merchant_state, mut game_events): Self::SystemData) {
         for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()) {
             match event {
                 GameEvent::NewDayStarted { day } => {
@@ -138,11 +138,13 @@ impl<'a> System<'a> for MerchantSystem {
             );
 
             // Handle purchases
+            let mut did_purchase = false;
             let current_money = stats.stat(Stat::Money);
             if input.is_key_pressed(VirtualKeyCode::Key1) {
                 if current_money >= food_price {
                     stats.add(Stat::Money, -food_price);
                     stats.add(Stat::Food, 1);
+                    did_purchase = true;
                     println!("You purchase some food.");
                 } else {
                     println!("You don't have enough money for that...");
@@ -151,6 +153,7 @@ impl<'a> System<'a> for MerchantSystem {
                 if current_money >= gas_price {
                     stats.add(Stat::Money, -gas_price);
                     stats.add(Stat::Gas, 1);
+                    did_purchase = true;
                     println!("You purchase some gasoline.");
                 } else {
                     println!("You don't have enough money for that...");
@@ -159,10 +162,15 @@ impl<'a> System<'a> for MerchantSystem {
                 if current_money >= part_price {
                     stats.add(Stat::Money, -part_price);
                     stats.add(Stat::Parts, 1);
+                    did_purchase = true;
                     println!("You purchase some parts.");
                 } else {
                     println!("You don't have enough money for that...");
                 }
+            }
+
+            if did_purchase {
+                game_events.single_write(GameEvent::RefreshActivities);
             }
         }
     }

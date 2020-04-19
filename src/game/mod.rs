@@ -45,11 +45,13 @@ pub enum GameEvent {
     MerchantArrived,
     GameOver,
     FinalDayGameWin,
+    RefreshActivities,
     ActivityGoFishing,
     ActivityPerformMaintenance,
     ActivityPrayToJand,
     ActivityDrinkAlcobev,
     ActivityHuntRats,
+    ActivityTinker,
 }
 
 #[derive(Clone, Copy, Hash, Eq, PartialEq)]
