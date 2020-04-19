@@ -33,11 +33,12 @@ pub type Point2d = nalgebra::Point2<f64>;
 pub const PIXELS_PER_WORLD_UNIT: u32 = 32;
 pub const PIXELS_TO_WORLD_UNITS: f64 = (1.0 / PIXELS_PER_WORLD_UNIT as f64);
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone)]
 pub enum GameEvent {
     NewGameStarted,
     NewDayStarted,
     ProgressTime { hours: i32 },
+    HandleStatEffects { effects: Vec<StatEffect> },
     PayDay,
     MerchantArrived,
     StarvationGameOver,
@@ -45,6 +46,8 @@ pub enum GameEvent {
     RefreshActivities,
     ActivityGoFishing,
     ActivityPerformMaintenance,
+    ActivityPrayToJand,
+    ActivityDrinkAlcobev,
 }
 
 pub struct GameState<'a, 'b> {
@@ -62,6 +65,7 @@ impl<'a, 'b> GameState<'a, 'b> {
         world.insert(PhysicsState::new());
         world.insert(TimeState::new());
         world.insert(StatsState::new());
+        world.insert(ActivityState::new());
         world.insert(AudioAssetDb::new());
         world.insert(EventChannel::<CollisionEvent>::new());
         world.insert(EventChannel::<OnClickedEvent>::new());
@@ -104,11 +108,12 @@ impl<'a, 'b> GameState<'a, 'b> {
 fn build_scene(world: &mut World, width: u32, height: u32) {
     // todo "building scene" is now just handled via the activity system.
 
+    /*
     let collision_groups = CollisionGroups::new();
         world
             .create_entity()
             .with(TransformComponent::new(
-                Vector2d::new(350.0, 350.0),
+                Vector2d::new(340.0, 350.0),
                 Vector2f::new(1.5, 1.0),
             ))
             .with(ColliderComponent::new(
@@ -123,7 +128,9 @@ fn build_scene(world: &mut World, width: u32, height: u32) {
             .with(ActivityComponent::new(Activity {
                 name: String::from("Go Fishing"),
                 hours_required: 2,
-                event: GameEvent::ActivityPerformMaintenance,
+                event: GameEvent::ActivityGoFishing,
+                effects: vec![StatEffect::Add { stat: Stat::Food, amount: 1 }],
+                is_repeatable: true,
             }))
             .with(ClickableComponent::new())
             .with(SpriteComponent::new(
@@ -144,7 +151,7 @@ fn build_scene(world: &mut World, width: u32, height: u32) {
         world
             .create_entity()
             .with(TransformComponent::new(
-                Vector2d::new(350.0, 450.0),
+                Vector2d::new(340.0, 450.0),
                 Vector2f::new(1.5, 1.0),
             ))
             .with(ColliderComponent::new(
@@ -159,7 +166,9 @@ fn build_scene(world: &mut World, width: u32, height: u32) {
             .with(ActivityComponent::new(Activity {
                 name: String::from("Perform Maintenance"),
                 hours_required: 3,
-                event: GameEvent::ActivityGoFishing,
+                event: GameEvent::ActivityPerformMaintenance,
+                effects: vec![StatEffect::Subtract { stat: Stat::Parts, amount: 1 }],
+                is_repeatable: false,
             }))
             .with(ClickableComponent::new())
             .with(SpriteComponent::new(
@@ -176,6 +185,83 @@ fn build_scene(world: &mut World, width: u32, height: u32) {
                 Transparency::Opaque,
             ))
             .build();
+
+        world
+            .create_entity()
+            .with(TransformComponent::new(
+                Vector2d::new(340.0, 550.0),
+                Vector2f::new(1.5, 1.0),
+            ))
+            .with(ColliderComponent::new(
+                Cuboid::new(Vector2d::new(
+                    (240.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                    (96.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                )),
+                Vector2d::zeros(),
+                collision_groups,
+                0.0,
+            ))
+            .with(ActivityComponent::new(Activity {
+                name: String::from("Pray To Jand"),
+                hours_required: 1,
+                event: GameEvent::ActivityPrayToJand,
+                effects: vec![StatEffect::Add { stat: Stat::Sanity, amount: 1 }],
+                is_repeatable: false,
+            }))
+            .with(ClickableComponent::new())
+            .with(SpriteComponent::new(
+                SpriteRegion {
+                    x: 0,
+                    y: 160,
+                    w: 160,
+                    h: 96,
+                },
+                resources::TEX_SPRITESHEET_UI,
+                Point2f::origin(),
+                COLOR_WHITE,
+                layers::LAYER_BUTTONS,
+                Transparency::Opaque,
+            ))
+            .build();
+
+        world
+            .create_entity()
+            .with(TransformComponent::new(
+                Vector2d::new(340.0, 650.0),
+                Vector2f::new(1.5, 1.0),
+            ))
+            .with(ColliderComponent::new(
+                Cuboid::new(Vector2d::new(
+                    (240.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                    (96.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                )),
+                Vector2d::zeros(),
+                collision_groups,
+                0.0,
+            ))
+            .with(ActivityComponent::new(Activity {
+                name: String::from("Have a Drink"),
+                hours_required: 1,
+                event: GameEvent::ActivityDrinkAlcobev,
+                effects: vec![StatEffect::Add { stat: Stat::Sanity, amount: 1 }, StatEffect::Subtract { stat: Stat::Food, amount: 1 }],
+                is_repeatable: false,
+            }))
+            .with(ClickableComponent::new())
+            .with(SpriteComponent::new(
+                SpriteRegion {
+                    x: 0,
+                    y: 160,
+                    w: 160,
+                    h: 96,
+                },
+                resources::TEX_SPRITESHEET_UI,
+                Point2f::origin(),
+                COLOR_WHITE,
+                layers::LAYER_BUTTONS,
+                Transparency::Opaque,
+            ))
+            .build();
+            */
 }
 
 fn lerp(start: f32, end: f32, percentage: f32) -> f32 {

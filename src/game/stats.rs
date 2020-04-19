@@ -1,11 +1,14 @@
 use crate::game::*;
 use specs::prelude::*;
+use std::collections::HashMap;
 
+#[derive(Clone, Copy)]
 pub enum StatEffect {
     Add { stat: Stat, amount: i32 },
     Subtract { stat: Stat, amount: i32 },
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Stat {
     Sanity,
     Food,
@@ -14,11 +17,23 @@ pub enum Stat {
     Money,
 }
 
+impl std::fmt::Display for Stat {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let printable = match *self {
+            Stat::Sanity => "Sanity",
+            Stat::Food => "Food",
+            Stat::Gas => "Gas",
+            Stat::Parts => "Parts",
+            Stat::Money => "Dollars",
+            _ => "Unknown",
+        };
+
+        write!(f, "{}", printable)
+    }
+}
+
 pub struct StatsState {
-    sanity: i32,
-    food: i32,
-    gas: i32,
-    parts: i32,
+    stats: HashMap<Stat, i32>,
 
     // TODO
     // flags list?
@@ -27,12 +42,25 @@ pub struct StatsState {
 
 impl StatsState {
     pub fn new() -> Self {
+        let mut stats = HashMap::new();
+        stats.insert(Stat::Sanity, 10);
+        stats.insert(Stat::Food, 8);
+        stats.insert(Stat::Gas, 8);
+        stats.insert(Stat::Parts, 5);
+        stats.insert(Stat::Money, 20);
+
         StatsState {
-            sanity: 10,
-            food: 15,
-            gas: 10,
-            parts: 5,
+            stats,
         }
+    }
+
+    pub fn stat(&self, stat: Stat) -> i32 {
+        self.stats.get(&stat).unwrap_or(&0).clone()
+    }
+
+    pub fn add(&mut self, stat: Stat, amount: i32) {
+        let entry = self.stats.entry(stat).or_insert(0);
+        *entry += amount;
     }
 }
 
@@ -67,13 +95,27 @@ impl<'a> System<'a> for StatsSystem {
         for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()) {
             match event {
                 GameEvent::NewDayStarted => {
-                    stats.food -= 1;
-                    if stats.food <= 0 {
+                    stats.add(Stat::Food, -1);
+                    if stats.stat(Stat::Food) <= 0 {
                         // TODO
                     }
 
-                    println!("1 food consumed.");
+                    println!("You unpack the days rations from food storage. (Food -1)");
                 },
+                GameEvent::HandleStatEffects { effects } => {
+                    for effect in effects {
+                        match effect {
+                            StatEffect::Add { stat, amount } => {
+                                stats.add(*stat, *amount);
+                                println!("({} +{})", stat, amount.abs());
+                            }
+                            StatEffect::Subtract { stat, amount } => {
+                                stats.add(*stat, -*amount);
+                                println!("({} -{})", stat, amount.abs());
+                            }
+                        }
+                    }
+                }
                 _ => {},
             }
         }
@@ -156,7 +198,7 @@ impl<'a> System<'a> for StatsInfoRenderSystem {
             8,
             16,
             1.0,
-            &format!("{}", stats.sanity),
+            &format!("{}", stats.stat(Stat::Sanity)),
         );
 
         // Food text
@@ -166,7 +208,7 @@ impl<'a> System<'a> for StatsInfoRenderSystem {
             8,
             16,
             1.0,
-            &format!("{}", stats.food),
+            &format!("{}", stats.stat(Stat::Food)),
         );
 
         // Parts text
@@ -176,7 +218,7 @@ impl<'a> System<'a> for StatsInfoRenderSystem {
             8,
             16,
             1.0,
-            &format!("{}", stats.parts),
+            &format!("{}", stats.stat(Stat::Parts)),
         );
 
         // Gas text
@@ -186,7 +228,7 @@ impl<'a> System<'a> for StatsInfoRenderSystem {
             8,
             16,
             1.0,
-            &format!("{}", stats.gas),
+            &format!("{}", stats.stat(Stat::Gas)),
         );
 
         // Money text
@@ -196,7 +238,7 @@ impl<'a> System<'a> for StatsInfoRenderSystem {
             8,
             16,
             1.5,
-            &format!("${}", 23),
+            &format!("${}", stats.stat(Stat::Money)),
         );
     }
 }

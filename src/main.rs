@@ -5,6 +5,7 @@ use game::{
     physics::PhysicsState,
     render::RenderState,
     time::*,
+    activity::*,
     resources::*,
     GameState,
 };
@@ -72,6 +73,10 @@ fn main() {
 
             game.tick_dispatcher.dispatch(&mut game.world);
             game.physics_dispatcher.dispatch(&mut game.world);
+
+            if game.world.read_resource::<ActivityState>().is_rebuild_required {
+                create_activity_ents(&mut game.world);
+            }
 
             game.world.maintain();
         },

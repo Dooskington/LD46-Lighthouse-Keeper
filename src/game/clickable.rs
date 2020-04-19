@@ -78,13 +78,18 @@ impl<'a> System<'a> for ClickableSystem {
 
         for (ent, clickable) in (&ents, &mut clickables).join() {
             if cursor_hit_ents.contains(ent.id()) {
-                if input.is_mouse_button_held(MouseButton::Left) {
+                if input.is_mouse_button_pressed(MouseButton::Left) {
                     if clickable.state != ClickableState::Clicked {
-                        //println!("clicked");
+                        //println!("click down");
                         clickable.state = ClickableState::Clicked;
+                    }
+                } else if input.is_mouse_button_released(MouseButton::Left) {
+                    if clickable.state == ClickableState::Clicked {
+                        //println!("click up");
+                        clickable.state = ClickableState::Hovered;
                         on_clicked_events.single_write(OnClickedEvent { ent });
                     }
-                } else {
+                } else if !input.is_mouse_button_held(MouseButton::Left) {
                     if clickable.state != ClickableState::Hovered {
                         //println!("hovered");
                         clickable.state = ClickableState::Hovered;

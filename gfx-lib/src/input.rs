@@ -31,6 +31,8 @@ impl InputState {
     pub fn clear_pressed_and_released(&mut self) {
         self.pressed_keys.clear();
         self.released_keys.clear();
+        self.pressed_mouse_buttons.clear();
+        self.released_mouse_buttons.clear();
     }
 
     pub fn handle_keyboard_input(&mut self, input: &KeyboardInput) {
@@ -81,7 +83,7 @@ impl InputState {
     }
 
     #[allow(dead_code)]
-    pub fn is_mouse_button_release(&self, button: MouseButton) -> bool {
+    pub fn is_mouse_button_released(&self, button: MouseButton) -> bool {
         *self.released_mouse_buttons.get(&button).unwrap_or(&false)
     }
 
