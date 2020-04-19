@@ -21,7 +21,6 @@ pub struct Activity {
     pub hours_required: i32,
     pub event: GameEvent,
     pub effects: Vec<StatEffect>,
-    pub is_repeatable: bool,
     pub conditions: Vec<GameCondition>,
 }
 
@@ -86,6 +85,8 @@ impl<'a> System<'a> for ActivitySystem {
                 }
                 GameEvent::ActivityPerformMaintenance => {
                     println!("You maintain some fixtures around the lighthouse.");
+
+                    // TODO reset lighthouse damaged condition
                 }
                 GameEvent::ActivityPrayToJand => {
                     println!(
@@ -114,11 +115,6 @@ impl<'a> System<'a> for ActivitySystem {
                     hours: comp.activity.hours_required,
                 });
                 game_events.single_write(comp.activity.event.clone());
-
-                if !comp.activity.is_repeatable {
-                    ents.delete(event.ent).unwrap();
-                }
-
                 game_events.single_write(GameEvent::RefreshActivities);
             }
         }
@@ -135,7 +131,6 @@ pub fn create_activities() -> Vec<Activity> {
                 stat: Stat::Food,
                 amount: 1,
             }],
-            is_repeatable: true,
             conditions: vec![],
         },
         Activity {
@@ -146,7 +141,6 @@ pub fn create_activities() -> Vec<Activity> {
                 stat: Stat::Parts,
                 amount: 1,
             }],
-            is_repeatable: false,
             conditions: vec![],
         },
         Activity {
@@ -157,7 +151,6 @@ pub fn create_activities() -> Vec<Activity> {
                 stat: Stat::Sanity,
                 amount: 1,
             }],
-            is_repeatable: false,
             conditions: vec![],
         },
         Activity {
@@ -174,7 +167,6 @@ pub fn create_activities() -> Vec<Activity> {
                     amount: 1,
                 },
             ],
-            is_repeatable: false,
             conditions: vec![],
         },
         Activity {
@@ -191,7 +183,6 @@ pub fn create_activities() -> Vec<Activity> {
                     amount: 1,
                 },
             ],
-            is_repeatable: false,
             conditions: vec![GameCondition::Starving],
         },
         Activity {
@@ -199,7 +190,6 @@ pub fn create_activities() -> Vec<Activity> {
             hours_required: 0,
             event: GameEvent::GameOver,
             effects: vec![],
-            is_repeatable: false,
             conditions: vec![GameCondition::FinalDay],
         },
         Activity {
@@ -210,7 +200,16 @@ pub fn create_activities() -> Vec<Activity> {
                 stat: Stat::Parts,
                 amount: 1,
             }],
-            is_repeatable: true,
+            conditions: vec![],
+        },
+        Activity {
+            name: String::from("DEBUG"),
+            hours_required: 1,
+            event: GameEvent::ActivityTinker,
+            effects: vec![StatEffect::Subtract {
+                stat: Stat::Sanity,
+                amount: 1,
+            }],
             conditions: vec![],
         },
     ]

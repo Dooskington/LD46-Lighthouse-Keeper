@@ -1,6 +1,7 @@
 use crate::game::*;
 use specs::prelude::*;
 use std::collections::HashMap;
+use rand::Rng;
 
 #[derive(Clone, Copy)]
 pub enum StatEffect {
@@ -114,11 +115,10 @@ impl<'a> System<'a> for StatsSystem {
                         if stats.stat(Stat::Food) <= 0 {
                             stats.set_condition(GameCondition::Starving, true);
                             println!("You are starving.");
-                            continue;
+                        } else {
+                            println!("You unpack the days rations from food storage. (Food -1)");
+                            stats.add(Stat::Food, -1);
                         }
-
-                        println!("You unpack the days rations from food storage. (Food -1)");
-                        stats.add(Stat::Food, -1);
                     } else {
                         if stats.stat(Stat::Food) <= 0 {
                             println!("You collapse due to starvation.");
@@ -127,6 +127,22 @@ impl<'a> System<'a> for StatsSystem {
                         }
 
                         stats.set_condition(GameCondition::Starving, false);
+                    }
+
+                    // Handle sanity
+                    if !stats.condition(GameCondition::Insane) {
+                        if stats.stat(Stat::Sanity) <= 0 {
+                            stats.set_condition(GameCondition::Insane, true);
+                            println!("You can't make the voices stop.");
+                        }
+                    } else {
+                        if stats.stat(Stat::Sanity) <= 0 {
+                            println!("In a fit of insanity, you throw yourself from atop the lighthouse.");
+                            stats.set_condition(GameCondition::GameOver, true);
+                            continue;
+                        }
+
+                        stats.set_condition(GameCondition::Insane, false);
                     }
                 }
                 GameEvent::HandleStatEffects { effects } => {

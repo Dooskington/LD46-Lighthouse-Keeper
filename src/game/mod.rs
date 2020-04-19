@@ -62,6 +62,8 @@ pub enum GameCondition {
     LensBroken,
     LighthouseDamaged,
     Starving,
+    BuggingOut,
+    Insane,
 }
 
 pub struct GameState<'a, 'b> {
