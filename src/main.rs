@@ -19,8 +19,8 @@ use specs::prelude::*;
 
 fn main() {
     let window_title: &str = "LD46 - Keep It Alive";
-    let window_width: u32 = 640;
-    let window_height: u32 = 480;
+    let window_width: u32 = 576;
+    let window_height: u32 = 1024;
     let render_scale: f32 = 1.0;
     let state = GameState::new(window_width, window_height);
 
@@ -39,29 +39,14 @@ fn main() {
                     renderer,
                 );
                 import_texture(
-                    game::resources::TEX_SPRITESHEET_BUTTONS,
-                    "res/textures/sprites.png",
+                    game::resources::TEX_SPRITESHEET_UI,
+                    "res/textures/ui-sprites.png",
                     renderer,
                 );
                 import_texture(game::resources::TEX_FONT, "res/textures/font.png", renderer);
                 import_texture(
-                    game::resources::TEX_BG_WORKSTATION,
-                    "res/textures/workstation-bg.png",
-                    renderer,
-                );
-                import_texture(
-                    game::resources::TEX_BG_LAB,
-                    "res/textures/lab-bg.png",
-                    renderer,
-                );
-                import_texture(
-                    game::resources::TEX_BG_GLASS,
-                    "res/textures/glass-bg.png",
-                    renderer,
-                );
-                import_texture(
-                    game::resources::TEX_SPRITESHEET_ALIEN,
-                    "res/textures/alien-sprites.png",
+                    game::resources::TEX_BG_LIGHTHOUSE,
+                    "res/textures/lighthouse-bg.png",
                     renderer,
                 );
             }
@@ -89,42 +74,21 @@ fn main() {
 
             let mut render = game.world.write_resource::<RenderState>();
 
-            // Day text (todo move this)
-            render.bind_color(COLOR_WHITE);
-            render.bind_layer(game::layers::LAYER_UI);
-            render.bind_transparency(Transparency::Transparent);
-            render.bind_texture(game::resources::TEX_FONT);
-            render.text(8.0, 8.0, 8, 16, 1.25, "Day 1");
-
             // FPS text
-            let msg = format!("FPS: {}", window.fps);
-            render.bind_color(COLOR_WHITE);
+            let msg = format!("{}", window.fps);
+            render.bind_color(COLOR_BLUE);
             render.bind_layer(game::layers::LAYER_UI);
             render.bind_transparency(Transparency::Transparent);
             render.bind_texture(game::resources::TEX_FONT);
             let fps_text_x = window_width as f32 - (msg.len() as f32 * 8.0) - 2.0;
             render.text(fps_text_x, 2.0, 8, 16, 1.0, &msg);
 
-            // Lab Background Layer
+            // Lighthouse Background Layer
             render.bind_color(COLOR_WHITE);
-            render.bind_layer(game::layers::LAYER_BG_LAB);
+            render.bind_layer(game::layers::LAYER_BG);
             render.bind_transparency(Transparency::Opaque);
-            render.bind_texture(game::resources::TEX_BG_LAB);
-            render.textured_quad((0.0, 480.0), (640.0, 480.0), (0.0, 0.0), (640.0, 0.0));
-
-            // Glass Background Layer
-            render.bind_color(COLOR_WHITE);
-            render.bind_layer(game::layers::LAYER_BG_GLASS);
-            render.bind_transparency(Transparency::Opaque);
-            render.bind_texture(game::resources::TEX_BG_GLASS);
-            render.textured_quad((0.0, 480.0), (640.0, 480.0), (0.0, 0.0), (640.0, 0.0));
-
-            // Workstation Background Layer
-            render.bind_color(COLOR_WHITE);
-            render.bind_layer(game::layers::LAYER_BG_WORKSTATION);
-            render.bind_transparency(Transparency::Opaque);
-            render.bind_texture(game::resources::TEX_BG_WORKSTATION);
-            render.textured_quad((0.0, 480.0), (640.0, 480.0), (0.0, 0.0), (640.0, 0.0));
+            render.bind_texture(game::resources::TEX_BG_LIGHTHOUSE);
+            render.textured_quad((0.0, window_height as f32), (window_width as f32, window_height as f32), (0.0, 0.0), (window_width as f32, 0.0));
 
             // Process commands into batches and send to the renderer
             let batches = renderer.process_commands(render.commands());

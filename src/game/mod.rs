@@ -1,4 +1,3 @@
-pub mod alien;
 pub mod audio;
 pub mod clickable;
 pub mod layers;
@@ -6,9 +5,9 @@ pub mod physics;
 pub mod render;
 pub mod resources;
 pub mod transform;
-pub mod workstation;
+pub mod time;
 
-use alien::*;
+use time::*;
 use audio::AudioAssetDb;
 use clickable::*;
 use gfx::{color::*, renderer::Transparency, sprite::SpriteRegion};
@@ -21,7 +20,6 @@ use shrev::EventChannel;
 use specs::prelude::*;
 use std::default::Default;
 use transform::TransformComponent;
-use workstation::*;
 
 pub type Vector2f = nalgebra::Vector2<f32>;
 pub type Vector2d = nalgebra::Vector2<f64>;
@@ -30,6 +28,11 @@ pub type Point2d = nalgebra::Point2<f64>;
 
 pub const PIXELS_PER_WORLD_UNIT: u32 = 32;
 pub const PIXELS_TO_WORLD_UNITS: f64 = (1.0 / PIXELS_PER_WORLD_UNIT as f64);
+
+#[derive(Clone, Copy, Debug)]
+pub enum GameEvent {
+    ProgressTime,
+}
 
 pub struct GameState<'a, 'b> {
     pub world: World,
@@ -44,17 +47,15 @@ impl<'a, 'b> GameState<'a, 'b> {
         // Resources
         world.insert(RenderState::new());
         world.insert(PhysicsState::new());
+        world.insert(TimeState::new());
         world.insert(AudioAssetDb::new());
         world.insert(EventChannel::<CollisionEvent>::new());
-        world.insert(EventChannel::<WorkstationEvent>::new());
-        world.insert(WorkstationState::new());
+        world.insert(EventChannel::<GameEvent>::new());
 
         let mut tick_dispatcher = DispatcherBuilder::new()
             .with(ClickableSystem::default(), "clickable", &[])
-            .with(AlienSystem::default(), "alien", &[])
-            .with(WorkstationSystem::default(), "workstation", &[])
-            .with_thread_local(AlienInfoRenderSystem::default())
-            .with_thread_local(WorkstationInfoRenderSystem::default())
+            .with(TimeSystem::default(), "time", &[])
+            .with_thread_local(TimeInfoRenderSystem::default())
             .with_thread_local(SpriteRenderSystem::default())
             .build();
 
@@ -80,6 +81,41 @@ impl<'a, 'b> GameState<'a, 'b> {
 }
 
 fn build_scene(world: &mut World, width: u32, height: u32) {
+    let collision_groups = CollisionGroups::new();
+        world
+            .create_entity()
+            .with(TransformComponent::new(
+                Vector2d::new(16.0, 200.0),
+                Vector2f::new(1.0, 1.0),
+            ))
+            .with(ColliderComponent::new(
+                Cuboid::new(Vector2d::new(
+                    (160.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                    (96.0 / 2.0) * PIXELS_TO_WORLD_UNITS,
+                )),
+                Vector2d::zeros(),
+                collision_groups,
+                0.0,
+            ))
+            .with(ClickableComponent::new(Some(
+                GameEvent::ProgressTime,
+            )))
+            .with(SpriteComponent::new(
+                SpriteRegion {
+                    x: 0,
+                    y: 160,
+                    w: 160,
+                    h: 96,
+                },
+                resources::TEX_SPRITESHEET_UI,
+                Point2f::origin(),
+                COLOR_WHITE,
+                layers::LAYER_BUTTONS,
+                Transparency::Opaque,
+            ))
+            .build();
+
+    /*
     // Testing buttons
     let collision_groups = CollisionGroups::new();
     world
@@ -170,6 +206,30 @@ fn build_scene(world: &mut World, width: u32, height: u32) {
         ))
         .with(AlienComponent::new())
         .build();
+
+    // Probe Injector
+    world
+        .create_entity()
+        .with(TransformComponent::new(
+            Vector2d::new(width as f64 - 64.0, 0.0),
+            Vector2f::new(1.0, 1.0),
+        ))
+        .with(SpriteComponent::new(
+            SpriteRegion {
+                x: 0,
+                y: 0,
+                w: 256,
+                h: 256,
+            },
+            resources::TEX_PROBE,
+            Point2f::new(0.5, 0.0),
+            COLOR_WHITE,
+            layers::LAYER_LAB,
+            Transparency::Opaque,
+        ))
+        //.with(ProbeComponent::new())
+        .build();
+        */
 }
 
 fn lerp(start: f32, end: f32, percentage: f32) -> f32 {

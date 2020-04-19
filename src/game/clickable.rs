@@ -12,11 +12,11 @@ enum ClickableState {
 
 pub struct ClickableComponent {
     state: ClickableState,
-    on_click_event: Option<WorkstationEvent>,
+    on_click_event: Option<GameEvent>,
 }
 
 impl ClickableComponent {
-    pub fn new(on_click_event: Option<WorkstationEvent>) -> Self {
+    pub fn new(on_click_event: Option<GameEvent>) -> Self {
         ClickableComponent {
             state: ClickableState::Normal,
             on_click_event,
@@ -36,7 +36,7 @@ impl<'a> System<'a> for ClickableSystem {
         Entities<'a>,
         ReadExpect<'a, InputState>,
         ReadExpect<'a, PhysicsState>,
-        WriteExpect<'a, EventChannel<WorkstationEvent>>,
+        WriteExpect<'a, EventChannel<GameEvent>>,
         WriteStorage<'a, ClickableComponent>,
     );
 
@@ -70,7 +70,7 @@ impl<'a> System<'a> for ClickableSystem {
             if cursor_hit_ents.contains(ent.id()) {
                 if input.is_mouse_button_held(MouseButton::Left) {
                     if clickable.state != ClickableState::Clicked {
-                        println!("clicked");
+                        //println!("clicked");
                         clickable.state = ClickableState::Clicked;
                         if let Some(event) = clickable.on_click_event {
                             workstation_events.single_write(event);
@@ -78,13 +78,13 @@ impl<'a> System<'a> for ClickableSystem {
                     }
                 } else {
                     if clickable.state != ClickableState::Hovered {
-                        println!("hovered");
+                        //println!("hovered");
                         clickable.state = ClickableState::Hovered;
                     }
                 }
             } else {
                 if clickable.state != ClickableState::Normal {
-                    println!("normal");
+                    //println!("normal");
                     clickable.state = ClickableState::Normal;
                 }
             }
