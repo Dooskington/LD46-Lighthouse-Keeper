@@ -24,14 +24,7 @@ pub fn play(id: AudioAssetId, audio_db: &AudioAssetDb, is_looping: bool) {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum AudioAssetId {
-    MusicBackground = 0,
-    SfxBallBounce0 = 1,
-    SfxBallBounce1 = 2,
-    SfxBallWallHit0 = 3,
-    SfxBallWallHit1 = 4,
-    SfxBrickBreak0 = 5,
-    SfxBrickBreak1 = 6,
-    SfxBallDeath0 = 7,
+    // TODO...
 }
 
 pub struct AudioAssetDb {

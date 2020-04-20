@@ -9,7 +9,9 @@ pub mod resources;
 pub mod stats;
 pub mod time;
 pub mod transform;
+pub mod log;
 
+use log::*;
 use activity::*;
 use audio::AudioAssetDb;
 use clickable::*;
@@ -37,24 +39,22 @@ pub const PIXELS_TO_WORLD_UNITS: f64 = (1.0 / PIXELS_PER_WORLD_UNIT as f64);
 
 #[derive(Clone)]
 pub enum GameEvent {
-    NewGameStarted,
     NewDayStarted { day: i32 },
     NewTimeOfDayStarted { time_of_day: TimeOfDay },
     ProgressTime { hours: i32 },
     HandleStatEffects { effects: Vec<StatEffect> },
-    MerchantArrived,
+    HandleConditionEffects { effects: Vec<ConditionEffect> },
     GameOver,
-    FinalDayGameWin,
     RefreshActivities,
     ActivityGoFishing,
     ActivityPerformMaintenance,
     ActivityPrayToJand,
     ActivityDrinkAlcobev,
     ActivityHuntRats,
-    ActivityTinker,
+    None,
 }
 
-#[derive(Clone, Copy, Hash, Eq, PartialEq)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq, Debug)]
 pub enum GameCondition {
     FinalDay,
     GameOver,
@@ -62,8 +62,9 @@ pub enum GameCondition {
     LensBroken,
     LighthouseDamaged,
     Starving,
-    BuggingOut,
     Insane,
+    Dread,
+    Inspired,
 }
 
 pub struct GameState<'a, 'b> {
@@ -83,9 +84,11 @@ impl<'a, 'b> GameState<'a, 'b> {
         world.insert(StatsState::new());
         world.insert(ActivityState::new());
         world.insert(MerchantState::new());
+        world.insert(LogState::default());
         world.insert(AudioAssetDb::new());
         world.insert(EventChannel::<CollisionEvent>::new());
         world.insert(EventChannel::<OnClickedEvent>::new());
+        world.insert(EventChannel::<LogEvent>::new());
         world.insert(EventChannel::<GameEvent>::new());
 
         let mut tick_dispatcher = DispatcherBuilder::new()
@@ -94,6 +97,7 @@ impl<'a, 'b> GameState<'a, 'b> {
             .with(StatsSystem::default(), "stats", &[])
             .with(MerchantSystem::default(), "merchant", &[])
             .with(ActivitySystem::default(), "activity", &["clickable"])
+            .with_thread_local(LogSystem::default())
             .with_thread_local(TimeInfoRenderSystem::default())
             .with_thread_local(StatsInfoRenderSystem::default())
             .with_thread_local(ActivityInfoRenderSystem::default())
@@ -113,7 +117,7 @@ impl<'a, 'b> GameState<'a, 'b> {
 
         world
             .write_resource::<EventChannel<GameEvent>>()
-            .single_write(GameEvent::NewGameStarted);
+            .single_write(GameEvent::RefreshActivities);
 
         GameState {
             world,

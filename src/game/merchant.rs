@@ -11,6 +11,9 @@ const MAX_MERCHANT_ARRIVAL_DAYS: i32 = 7;
 pub struct MerchantState {
     has_arrived: bool,
     next_arrival_day: i32,
+    food_price: i32,
+    gas_price: i32,
+    part_price: i32,
 }
 
 impl MerchantState {
@@ -20,6 +23,9 @@ impl MerchantState {
         MerchantState {
             has_arrived: false,
             next_arrival_day,
+            food_price: 2,
+            gas_price: 3,
+            part_price: 4,
         }
     }
 }
@@ -36,6 +42,7 @@ impl<'a> System<'a> for MerchantSystem {
         ReadExpect<'a, InputState>,
         WriteExpect<'a, MerchantState>,
         WriteExpect<'a, EventChannel<GameEvent>>,
+        WriteExpect<'a, EventChannel<LogEvent>>,
     );
 
     fn setup(&mut self, world: &mut World) {
@@ -48,7 +55,7 @@ impl<'a> System<'a> for MerchantSystem {
         );
     }
 
-    fn run(&mut self, (mut render, mut stats, input, mut merchant_state, mut game_events): Self::SystemData) {
+    fn run(&mut self, (mut render, mut stats, input, mut merchant_state, mut game_events, mut log_events): Self::SystemData) {
         for event in game_events.read(&mut self.game_event_reader.as_mut().unwrap()) {
             match event {
                 GameEvent::NewDayStarted { day } => {
@@ -57,12 +64,17 @@ impl<'a> System<'a> for MerchantSystem {
                         merchant_state.next_arrival_day = day + rand::thread_rng()
                         .gen_range(MIN_MERCHANT_ARRIVAL_DAYS, MAX_MERCHANT_ARRIVAL_DAYS);
 
-                        println!("A merchant ship arrives, looking to sell some basic goods.");
+                        log_events.single_write(LogEvent { message: String::from("A merchant ship arrives, looking to sell some basic goods."), color: COLOR_YELLOW });
                     }
                 }
                 GameEvent::NewTimeOfDayStarted { time_of_day } => {
                     if merchant_state.has_arrived && (*time_of_day == TimeOfDay::Night) {
-                        println!("The merchant ship sails off into the sunset.");
+                        log_events.single_write(LogEvent { message: String::from("The merchant ship sails off into the sunset."), color: COLOR_YELLOW });
+
+                        let mut rand = rand::thread_rng();
+                        merchant_state.food_price = rand.gen_range(2, 4);
+                        merchant_state.gas_price = rand.gen_range(3, 8);
+                        merchant_state.part_price = rand.gen_range(3, 10);
 
                         merchant_state.has_arrived = false;
                     }
@@ -76,10 +88,8 @@ impl<'a> System<'a> for MerchantSystem {
         }
 
         if merchant_state.has_arrived {
-            // TODO randomize these every arrival or something
-            let food_price = 2;
-            let gas_price = 3;
-            let part_price = 4;
+            let pos_x = 0.0;
+            let pos_y = 500.0;
 
             // Window background
             render.bind_transparency(Transparency::Opaque);
@@ -87,8 +97,8 @@ impl<'a> System<'a> for MerchantSystem {
             render.bind_color(COLOR_WHITE);
             render.bind_layer(layers::LAYER_UI);
             render.sprite(
-                0.0,
-                200.0,
+                pos_x,
+                pos_y,
                 Point2f::new(0.5, 0.5),
                 Vector2f::new(2.0, 2.0),
                 SpriteRegion {
@@ -102,35 +112,35 @@ impl<'a> System<'a> for MerchantSystem {
             // Render text and prices for shop items
             render.bind_texture(resources::TEX_FONT);
             render.bind_color(COLOR_BLACK);
-            render.text(16.0, 200.0 + 16.0, 8, 16, 1.5, "Merchant Ship");
+            render.text(pos_x + 16.0, pos_y + 16.0, 8, 16, 1.5, "Merchant Ship");
             render.text(
-                16.0,
-                250.0,
+                pos_x + 16.0,
+                pos_y + 50.0,
                 8,
                 16,
                 1.0,
-                &format!("'1' => Purchase some food for ${}", food_price),
+                &format!("'1' => Purchase some food for ${}", merchant_state.food_price),
             );
             render.text(
-                16.0,
-                250.0 + 16.0,
+                pos_x + 16.0,
+                pos_y + 50.0 + 16.0,
                 8,
                 16,
                 1.0,
-                &format!("'2' => Purchase some gasoline for ${}", gas_price),
+                &format!("'2' => Purchase some gasoline for ${}", merchant_state.gas_price),
             );
             render.text(
-                16.0,
-                250.0 + 32.0,
+                pos_x + 16.0,
+                pos_y + 50.0 + 32.0,
                 8,
                 16,
                 1.0,
-                &format!("'3' => Purchase some parts for ${}", part_price),
+                &format!("'3' => Purchase some parts for ${}", merchant_state.part_price),
             );
 
             render.text(
-                16.0,
-                350.0,
+                pos_x + 16.0,
+                pos_y + 50.0 + 48.0,
                 8,
                 16,
                 1.0,
@@ -141,31 +151,31 @@ impl<'a> System<'a> for MerchantSystem {
             let mut did_purchase = false;
             let current_money = stats.stat(Stat::Money);
             if input.is_key_pressed(VirtualKeyCode::Key1) {
-                if current_money >= food_price {
-                    stats.add(Stat::Money, -food_price);
+                if current_money >= merchant_state.food_price {
+                    stats.add(Stat::Money, -merchant_state.food_price);
                     stats.add(Stat::Food, 1);
                     did_purchase = true;
-                    println!("You purchase some food.");
+                    log_events.single_write(LogEvent { message: String::from("You purchase some food."), color: COLOR_GREEN });
                 } else {
-                    println!("You don't have enough money for that...");
+                    log_events.single_write(LogEvent { message: String::from("You don't have enough money for that..."), color: COLOR_RED });
                 }
             } else if input.is_key_pressed(VirtualKeyCode::Key2) {
-                if current_money >= gas_price {
-                    stats.add(Stat::Money, -gas_price);
+                if current_money >= merchant_state.gas_price {
+                    stats.add(Stat::Money, -merchant_state.gas_price);
                     stats.add(Stat::Gas, 1);
                     did_purchase = true;
-                    println!("You purchase some gasoline.");
+                    log_events.single_write(LogEvent { message: String::from("You purchase some gas."), color: COLOR_GREEN });
                 } else {
-                    println!("You don't have enough money for that...");
+                    log_events.single_write(LogEvent { message: String::from("You don't have enough money for that..."), color: COLOR_RED });
                 }
             } else if input.is_key_pressed(VirtualKeyCode::Key3) {
-                if current_money >= part_price {
-                    stats.add(Stat::Money, -part_price);
+                if current_money >= merchant_state.part_price {
+                    stats.add(Stat::Money, -merchant_state.part_price);
                     stats.add(Stat::Parts, 1);
                     did_purchase = true;
-                    println!("You purchase some parts.");
+                    log_events.single_write(LogEvent { message: String::from("You purchase some parts."), color: COLOR_GREEN });
                 } else {
-                    println!("You don't have enough money for that...");
+                    log_events.single_write(LogEvent { message: String::from("You don't have enough money for that..."), color: COLOR_RED });
                 }
             }
 

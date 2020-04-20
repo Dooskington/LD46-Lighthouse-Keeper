@@ -6,8 +6,10 @@ use game::{
     physics::PhysicsState,
     render::RenderState,
     resources::*,
+    stats::*,
     time::*,
     GameState,
+    GameCondition,
 };
 use gfx::{
     color::*,
@@ -21,8 +23,8 @@ use specs::prelude::*;
 
 fn main() {
     let window_title: &str = "LD46 - Keep It Alive";
-    let window_width: u32 = 576;
-    let window_height: u32 = 1024;
+    let window_width: u32 = 1280;
+    let window_height: u32 = 720;
     let render_scale: f32 = 1.0;
     let state = GameState::new(window_width, window_height);
 
@@ -111,18 +113,19 @@ fn main() {
 
             // Lighthouse light (during night)
             if game.world.read_resource::<TimeState>().time_of_day == TimeOfDay::Night {
-                // TODO
                 // Don't do this if the StatsState says that the lighthouse isn't working
-
-                render.bind_layer(game::layers::LAYER_BG + 1);
-                render.bind_transparency(Transparency::Opaque);
-                render.bind_texture(game::resources::TEX_BG_LIGHTHOUSE_LIGHT);
-                render.textured_quad(
-                    (0.0, window_height as f32),
-                    (window_width as f32, window_height as f32),
-                    (0.0, 0.0),
-                    (window_width as f32, 0.0),
-                );
+                let stats = game.world.read_resource::<StatsState>();
+                if !stats.condition(GameCondition::LensBroken) && !stats.condition(GameCondition::GeneratorBroken) {
+                    render.bind_layer(game::layers::LAYER_BG + 1);
+                    render.bind_transparency(Transparency::Opaque);
+                    render.bind_texture(game::resources::TEX_BG_LIGHTHOUSE_LIGHT);
+                    render.textured_quad(
+                        (0.0, window_height as f32),
+                        (window_width as f32, window_height as f32),
+                        (0.0, 0.0),
+                        (window_width as f32, 0.0),
+                    );
+                }
             }
 
             // Process commands into batches and send to the renderer

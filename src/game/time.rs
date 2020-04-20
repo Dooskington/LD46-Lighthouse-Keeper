@@ -57,6 +57,7 @@ pub struct TimeSystem {
 impl<'a> System<'a> for TimeSystem {
     type SystemData = (
         WriteExpect<'a, EventChannel<GameEvent>>,
+        WriteExpect<'a, EventChannel<LogEvent>>,
         WriteExpect<'a, TimeState>,
     );
 
@@ -70,7 +71,7 @@ impl<'a> System<'a> for TimeSystem {
         );
     }
 
-    fn run(&mut self, (mut game_events, mut time): Self::SystemData) {
+    fn run(&mut self, (mut game_events, mut log_events, mut time): Self::SystemData) {
         // NOTE (declan, 4/18/20)
         // what am I thinking
         let mut did_new_day_start = false;
@@ -81,9 +82,6 @@ impl<'a> System<'a> for TimeSystem {
             .cloned()
         {
             match event {
-                GameEvent::NewGameStarted => {
-                    did_new_time_of_day_start = true;
-                }
                 GameEvent::ProgressTime { hours } => {
                     time.hours_passed += hours;
                     if time.hours_passed >= 4 {
@@ -107,11 +105,13 @@ impl<'a> System<'a> for TimeSystem {
         }
 
         if did_new_time_of_day_start {
-            match time.time_of_day {
-                TimeOfDay::Morning => println!("The cool sea air wakes you from slumber."),
-                TimeOfDay::Afternoon => println!("The sun rises high in the sky."),
-                TimeOfDay::Night => println!("The darkness of night creeps upon your lonely isle."),
-            }
+            let msg = match time.time_of_day {
+                TimeOfDay::Morning => "The cool sea air wakes you from slumber.",
+                TimeOfDay::Afternoon => "The sun rises high in the sky.",
+                TimeOfDay::Night => "The darkness of night creeps upon your lonely isle.",
+            }.to_owned();
+
+            log_events.single_write(LogEvent { message: msg, color: COLOR_YELLOW });
 
             game_events.single_write(GameEvent::NewTimeOfDayStarted {
                 time_of_day: time.time_of_day,
